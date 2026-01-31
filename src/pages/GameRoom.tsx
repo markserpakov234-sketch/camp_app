@@ -122,7 +122,7 @@ export default function GameRoom() {
           padding: 18,
           marginBottom: 26,
           cursor: 'pointer',
-          background: '#ecfdf5', // нежно-зелёный
+          background: '#ecfdf5',
           boxShadow: '0 10px 24px rgba(0,0,0,0.08)',
           transition: 'transform 0.2s ease, box-shadow 0.2s ease',
         }}
@@ -222,7 +222,9 @@ export default function GameRoom() {
           return (
             <div
               key={game.id}
-              ref={(el) => (gameRefs.current[game.id] = el)}
+              ref={(el) => {
+                gameRefs.current[game.id] = el;
+              }}
               style={{
                 background: '#ffffff',
                 borderRadius: 22,

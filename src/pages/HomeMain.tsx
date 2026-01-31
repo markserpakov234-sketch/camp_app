@@ -1,4 +1,4 @@
-import { Clock, Bell } from 'lucide-react';
+import { Bell } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 type Props = {

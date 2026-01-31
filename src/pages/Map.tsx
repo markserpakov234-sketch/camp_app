@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   MapContainer,
   TileLayer,
@@ -22,19 +22,23 @@ L.Icon.Default.mergeOptions({
 
 type LatLng = [number, number];
 
+function MapClick({
+  onClick,
+}: {
+  onClick: (pos: LatLng) => void;
+}) {
+  useMapEvents({
+    click(e) {
+      onClick([e.latlng.lat, e.latlng.lng]);
+    },
+  });
+  return null;
+}
+
 export default function Map() {
   const [currentPos, setCurrentPos] = useState<LatLng | null>(null);
   const [query, setQuery] = useState('');
   const mapRef = useRef<L.Map | null>(null);
-
-  function MapClick() {
-    useMapEvents({
-      click(e) {
-        setCurrentPos([e.latlng.lat, e.latlng.lng]);
-      },
-    });
-    return null;
-  }
 
   const filteredPoints = CAMP_POINTS.filter((p) =>
     p.name.toLowerCase().includes(query.toLowerCase())
@@ -56,7 +60,6 @@ export default function Map() {
             Нажми на карту или найди объект
           </div>
 
-          {/* 🔍 ПОИСК */}
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -89,20 +92,18 @@ export default function Map() {
       {/* 🗺 КАРТА */}
       <div className="pt-28 h-full">
         <MapContainer
+          ref={mapRef}
           center={[CAMP_CENTER.lat, CAMP_CENTER.lng]}
           zoom={17}
           className="h-full w-full"
-          whenCreated={(map) => {
-            mapRef.current = map;
-            map.zoomControl.setPosition('bottomright');
-          }}
+          zoomControl={false}
         >
           <TileLayer
             attribution="© OpenStreetMap contributors"
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
 
-          <MapClick />
+          <MapClick onClick={setCurrentPos} />
 
           {/* 📍 Мы здесь */}
           {currentPos && (
