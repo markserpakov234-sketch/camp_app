@@ -10,19 +10,18 @@ export default function Login({ onLogin }: Props) {
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
 
-  // ⬇️ КОД СМЕНЫ БЕРЁМ ИЗ .env
   const SHIFT_CODE = import.meta.env.VITE_SHIFT_CODE;
 
   function handleLogin() {
     setError('');
 
     if (!name.trim() || !squad.trim() || !code.trim()) {
-      setError('Заполните все поля');
+      setError('Пожалуйста, заполните все поля');
       return;
     }
 
     if (code !== SHIFT_CODE) {
-      setError('Неверный код смены');
+      setError('Код смены введён неверно');
       return;
     }
 
@@ -31,52 +30,77 @@ export default function Login({ onLogin }: Props) {
       squad: squad.trim(),
     };
 
-    // 💾 сохраняем в браузере
     localStorage.setItem('user', JSON.stringify(user));
-
     onLogin(user);
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-6 rounded-xl shadow-md w-full max-w-sm">
-        <h1 className="text-xl font-bold mb-4 text-center">
-          Вход для вожатого
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-orange-50 to-white px-4">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
+        
+        {/* Бренд */}
+        <div className="text-center mb-8">
+          <div className="text-[26px] font-extrabold tracking-wide text-gray-800">
+            ТОЧКА СБОРКИ
+          </div>
+          <div className="text-[13px] font-bold tracking-widest text-orange-500">
+            ДЕТСКИЙ КУРОРТ ВИТА
+          </div>
+        </div>
+
+        {/* Заголовок */}
+        <h1 className="text-xl font-semibold text-center text-gray-800 mb-2">
+          Вход для сотрудников смены
         </h1>
+        <p className="text-center text-gray-500 mb-6 text-sm">
+          Пожалуйста, введите данные для входа
+        </p>
 
-        <input
-          type="text"
-          placeholder="ФИО"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="w-full mb-3 px-3 py-2 border rounded"
-        />
+        {/* Форма */}
+        <div className="space-y-4">
+          <input
+            type="text"
+            placeholder="Фамилия и имя"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200
+              focus:outline-none focus:ring-2 focus:ring-orange-400"
+          />
 
-        <input
-          type="text"
-          placeholder="Отряд"
-          value={squad}
-          onChange={(e) => setSquad(e.target.value)}
-          className="w-full mb-3 px-3 py-2 border rounded"
-        />
+          <input
+            type="text"
+            placeholder="№ города"
+            value={squad}
+            onChange={(e) => setSquad(e.target.value)}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200
+              focus:outline-none focus:ring-2 focus:ring-orange-400"
+          />
 
-        <input
-          type="password"
-          placeholder="Код смены"
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          className="w-full mb-3 px-3 py-2 border rounded"
-        />
+          <input
+            type="password"
+            placeholder="Код смены"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200
+              focus:outline-none focus:ring-2 focus:ring-orange-400"
+          />
+        </div>
 
+        {/* Ошибка */}
         {error && (
-          <div className="text-red-500 text-sm mb-3 text-center">{error}</div>
+          <div className="mt-4 text-sm text-center text-red-500">
+            {error}
+          </div>
         )}
 
+        {/* Кнопка */}
         <button
           onClick={handleLogin}
-          className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700"
+          className="mt-6 w-full py-3 rounded-xl
+            bg-orange-500 text-white font-semibold
+            hover:bg-orange-600 transition"
         >
-          Войти
+          Войти в систему
         </button>
       </div>
     </div>

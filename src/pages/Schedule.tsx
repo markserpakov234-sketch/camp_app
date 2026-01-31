@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+
+/* ===================== ТИПЫ ===================== */
 
 interface ScheduleItem {
   date: string;
@@ -9,228 +11,340 @@ interface ScheduleItem {
   note?: string;
 }
 
-const API_URL =
+type RawSlot = {
+  date: string;
+  time_from: string;
+  time_to: string;
+  squad: string;
+};
+
+type Slot = {
+  date: string;
+  timeFrom: string;
+  timeTo: string;
+  squad: string;
+};
+
+/* ===================== API ===================== */
+
+const SCHEDULE_API =
   'https://script.google.com/macros/s/AKfycbwY7Ddk6Wahkcq4ZtED4sQ61mvQdr5EJ03GINAlRHNpDd9GgpqH8r5OCxu0tcTYUZbo9g/exec';
 
-const STORAGE_KEY = 'schedule-cache-v1';
+const POOL_API =
+  'https://script.google.com/macros/s/AKfycbwkx4Sf8SB13IWT5Ir2iy_C6XdnQP589jK5Ry3cmNPOOkH2FLHUniDtqvlzqowG03yk/exec';
 
-/* ================= helpers ================= */
+const SCHEDULE_CACHE = 'schedule-day-v1';
+const POOL_CACHE = 'pool-day-v1';
 
-function timeToMinutes(t: string): number {
-  if (!t) return -1;
+/* ===================== HELPERS ===================== */
+
+function timeToMinutes(t: string) {
   const [h, m] = t.split(':').map(Number);
   return h * 60 + m;
 }
 
-function getLocalDateKey(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+function formatLongDate(d: Date) {
+  return d.toLocaleDateString('ru-RU', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
 }
 
-function isoToLocalKey(iso: string): string {
-  return getLocalDateKey(new Date(iso));
+function formatShortDate(d: Date) {
+  return d.toLocaleDateString('ru-RU');
 }
 
-/* ================= component ================= */
+function addDays(date: Date, days: number) {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+/* ===================== COMPONENT ===================== */
 
 export default function Schedule() {
-  const [items, setItems] = useState<ScheduleItem[]>([]);
-  const [loading, setLoading] = useState(true);
-
   const now = new Date();
-  const todayKey = getLocalDateKey(now);
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
-  const currentRef = useRef<HTMLDivElement | null>(null);
-  const notifiedRef = useRef<Set<string>>(new Set());
+  const [tab, setTab] = useState<'events' | 'pool'>('events');
+  const [dayOffset, setDayOffset] = useState<0 | 1>(0);
 
-  /* ---------- load data (API + cache) ---------- */
+  const selectedDate = addDays(now, dayOffset);
+  const selectedDateShort = formatShortDate(selectedDate);
+
+  /* ----------- мероприятия ----------- */
+
+  const [items, setItems] = useState<ScheduleItem[]>([]);
+  const [loadingSchedule, setLoadingSchedule] = useState(true);
+  const currentRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    // 1️⃣ сначала пробуем кеш
-    const cached = localStorage.getItem(STORAGE_KEY);
+    const cached = localStorage.getItem(SCHEDULE_CACHE);
     if (cached) {
-      try {
-        const parsed = JSON.parse(cached);
-        setItems(parsed);
-        setLoading(false);
-      } catch {}
+      setItems(JSON.parse(cached));
+      setLoadingSchedule(false);
     }
 
-    // 2️⃣ затем обновляем с сервера
-    fetch(API_URL)
+    fetch(SCHEDULE_API)
       .then((r) => r.json())
       .then((data: ScheduleItem[]) => {
-        const todayItems = data
-          .filter((i) => isoToLocalKey(i.date) === todayKey)
-          .filter((i) => i.title && i.start && i.end)
-          .sort((a, b) => timeToMinutes(a.start) - timeToMinutes(b.start));
+        const filtered = data
+          .filter(
+            (i) =>
+              formatShortDate(new Date(i.date)) ===
+              selectedDateShort
+          )
+          .sort(
+            (a, b) =>
+              timeToMinutes(a.start) -
+              timeToMinutes(b.start)
+          );
 
-        setItems(todayItems);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(todayItems));
-        setLoading(false);
+        setItems(filtered);
+        localStorage.setItem(
+          SCHEDULE_CACHE,
+          JSON.stringify(filtered)
+        );
+        setLoadingSchedule(false);
       })
-      .catch(() => setLoading(false));
-  }, []);
-
-  /* ---------- автоскролл ---------- */
+      .catch(() => setLoadingSchedule(false));
+  }, [selectedDateShort]);
 
   useEffect(() => {
-    if (currentRef.current) {
-      currentRef.current.scrollIntoView({
+    if (tab === 'events' && dayOffset === 0) {
+      currentRef.current?.scrollIntoView({
         behavior: 'smooth',
         block: 'center',
       });
     }
-  }, [items]);
+  }, [items, tab, dayOffset]);
 
-  /* ---------- уведомление за 10 минут ---------- */
+  /* ----------- бассейн ----------- */
+
+  const [slots, setSlots] = useState<Slot[]>([]);
+  const [loadingPool, setLoadingPool] = useState(true);
 
   useEffect(() => {
-    if (!('Notification' in window)) return;
-
-    if (Notification.permission === 'default') {
-      Notification.requestPermission();
+    const cached = localStorage.getItem(POOL_CACHE);
+    if (cached) {
+      setSlots(JSON.parse(cached));
+      setLoadingPool(false);
     }
 
-    const timer = setInterval(() => {
-      const now = new Date();
-      const minutesNow = now.getHours() * 60 + now.getMinutes();
+    fetch(POOL_API)
+      .then((r) => r.json())
+      .then((raw: RawSlot[]) => {
+        const normalized = raw.map((s) => ({
+          date: formatShortDate(new Date(s.date)),
+          timeFrom: s.time_from,
+          timeTo: s.time_to,
+          squad: s.squad,
+        }));
 
-      items.forEach((item) => {
-        const startMin = timeToMinutes(item.start);
-        const diff = startMin - minutesNow;
+        setSlots(normalized);
+        localStorage.setItem(
+          POOL_CACHE,
+          JSON.stringify(normalized)
+        );
+        setLoadingPool(false);
+      })
+      .catch(() => setLoadingPool(false));
+  }, []);
 
-        const key = `${item.title}-${item.start}`;
+  const daySlots = useMemo(() => {
+    return slots.filter(
+      (s) => s.date === selectedDateShort
+    );
+  }, [slots, selectedDateShort]);
 
-        if (
-          diff === 10 &&
-          !notifiedRef.current.has(key) &&
-          Notification.permission === 'granted'
-        ) {
-          new Notification('⏰ Скоро мероприятие', {
-            body: `${item.title} — через 10 минут`,
-          });
-          notifiedRef.current.add(key);
-        }
-      });
-    }, 60_000);
-
-    return () => clearInterval(timer);
-  }, [items]);
-
-  /* ---------- render ---------- */
+  /* ===================== RENDER ===================== */
 
   let nextFound = false;
 
   return (
-    <div style={styles.container}>
-      <div style={styles.date}>
-        Сегодня,{' '}
-        {now.toLocaleDateString('ru-RU', {
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric',
-        })}
+    <div className="bg-gray-100 min-h-screen pb-24">
+
+      {/* ===== ЛИПКАЯ ВЕРХНЯЯ ЧАСТЬ ===== */}
+      <div className="sticky top-0 z-20 bg-gray-100 px-4 pt-4 space-y-3">
+        {/* ДАТА */}
+        <div className="text-lg font-semibold">
+          {dayOffset === 0 ? 'Сегодня' : 'Завтра'},{' '}
+          {formatLongDate(selectedDate)}
+        </div>
+
+        {/* ПЕРЕКЛЮЧЕНИЕ ДНЯ */}
+        <div className="flex bg-white rounded-2xl p-1 shadow">
+          <button
+            onClick={() => setDayOffset(0)}
+            className={`flex-1 py-2 rounded-xl text-sm font-bold
+              ${
+                dayOffset === 0
+                  ? 'bg-orange-500 text-white'
+                  : 'text-gray-500'
+              }`}
+          >
+            Сегодня
+          </button>
+          <button
+            onClick={() => setDayOffset(1)}
+            className={`flex-1 py-2 rounded-xl text-sm font-bold
+              ${
+                dayOffset === 1
+                  ? 'bg-orange-500 text-white'
+                  : 'text-gray-500'
+              }`}
+          >
+            Завтра
+          </button>
+        </div>
+
+        {/* ПЕРЕКЛЮЧЕНИЕ РАЗДЕЛА */}
+        <div className="flex bg-white rounded-2xl p-1 shadow">
+          <button
+            onClick={() => setTab('events')}
+            className={`flex-1 py-2 rounded-xl text-sm font-bold
+              ${
+                tab === 'events'
+                  ? 'bg-orange-500 text-white'
+                  : 'text-gray-500'
+              }`}
+          >
+            МЕРОПРИЯТИЯ
+          </button>
+          <button
+            onClick={() => setTab('pool')}
+            className={`flex-1 py-2 rounded-xl text-sm font-bold
+              ${
+                tab === 'pool'
+                  ? 'bg-orange-500 text-white'
+                  : 'text-gray-500'
+              }`}
+          >
+            БАССЕЙН
+          </button>
+        </div>
       </div>
 
-      {loading && <div style={styles.loading}>Загружаю расписание…</div>}
+      {/* ===== КОНТЕНТ ===== */}
+      <div className="p-4 space-y-4">
 
-      {!loading && items.length === 0 && (
-        <div style={styles.empty}>На сегодня ничего не запланировано</div>
-      )}
+        {tab === 'events' && (
+          <>
+            {loadingSchedule && (
+              <div className="text-sm text-gray-400 animate-pulse">
+                Загружаю расписание…
+              </div>
+            )}
 
-      {items.map((item, index) => {
-        const startMin = timeToMinutes(item.start);
-        const endMin = timeToMinutes(item.end);
+            {!loadingSchedule &&
+              items.map((item, i) => {
+                const start = timeToMinutes(item.start);
+                const end = timeToMinutes(item.end);
 
-        const isCurrent =
-          currentMinutes >= startMin && currentMinutes <= endMin;
+                const isCurrent =
+                  dayOffset === 0 &&
+                  currentMinutes >= start &&
+                  currentMinutes <= end;
 
-        const isNext = !isCurrent && !nextFound && currentMinutes < startMin;
+                const isNext =
+                  dayOffset === 0 &&
+                  !isCurrent &&
+                  !nextFound &&
+                  currentMinutes < start;
 
-        if (isNext) nextFound = true;
+                if (isNext) nextFound = true;
 
-        return (
-          <div
-            key={index}
-            ref={isCurrent ? currentRef : null}
-            style={{
-              ...styles.card,
-              ...(isCurrent ? styles.current : {}),
-              ...(isNext ? styles.next : {}),
-            }}
-          >
-            <div style={styles.time}>
-              {item.start} – {item.end}
-            </div>
-            <div style={styles.title}>{item.title}</div>
-            <div style={styles.place}>{item.place}</div>
-            {item.note && <div style={styles.note}>💬 {item.note}</div>}
-          </div>
-        );
-      })}
+                return (
+                  <div
+                    key={i}
+                    ref={isCurrent ? currentRef : null}
+                    className={`rounded-2xl p-4 shadow
+                      ${
+                        isCurrent
+                          ? 'bg-green-50 border-l-4 border-green-500 scale-[1.02]'
+                          : isNext
+                          ? 'bg-orange-50 border-l-4 border-orange-400'
+                          : 'bg-white'
+                      }`}
+                  >
+                    <div className="text-xs text-gray-500">
+                      {item.start} – {item.end}
+                    </div>
+
+                    <div className="font-semibold">
+                      {item.title}
+                    </div>
+
+                    <div className="text-sm text-gray-600">
+                      {item.place}
+                    </div>
+
+                    {item.note && (
+                      <div className="mt-2 text-xs bg-gray-100 rounded-lg px-2 py-1">
+                        💬 {item.note}
+                      </div>
+                    )}
+
+                    {isCurrent && (
+                      <span className="inline-block mt-2 text-xs font-bold bg-green-600 text-white px-3 py-1 rounded-full">
+                        ИДЁТ СЕЙЧАС
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+          </>
+        )}
+
+        {tab === 'pool' && (
+          <>
+            {loadingPool && (
+              <div className="text-sm text-gray-400 animate-pulse">
+                Загружаю бассейн…
+              </div>
+            )}
+
+            {!loadingPool &&
+              daySlots.map((slot, i) => {
+                const start = timeToMinutes(slot.timeFrom);
+                const end = timeToMinutes(slot.timeTo);
+
+                const isCurrent =
+                  dayOffset === 0 &&
+                  currentMinutes >= start &&
+                  currentMinutes < end;
+
+                return (
+                  <div
+                    key={i}
+                    className={`bg-white rounded-2xl p-4 shadow flex justify-between
+                      ${
+                        isCurrent
+                          ? 'border-2 border-green-500 bg-green-50'
+                          : ''
+                      }`}
+                  >
+                    <div>
+                      <div className="font-semibold">
+                        {slot.timeFrom}–{slot.timeTo}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        ГОРОД № {slot.squad || '—'}
+                      </div>
+                    </div>
+
+                    {isCurrent && (
+                      <span className="text-xs font-bold bg-green-600 text-white px-3 py-1 rounded-full">
+                        СЕЙЧАС
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+          </>
+        )}
+      </div>
     </div>
   );
 }
-
-/* ================= styles ================= */
-
-const styles: { [k: string]: React.CSSProperties } = {
-  container: {
-    padding: 16,
-    maxWidth: 420,
-    margin: '0 auto',
-  },
-  date: {
-    fontSize: 18,
-    fontWeight: 600,
-    marginBottom: 16,
-  },
-  loading: {
-    fontSize: 14,
-    opacity: 0.6,
-    animation: 'pulse 1.2s infinite',
-  },
-  empty: {
-    fontSize: 14,
-    opacity: 0.6,
-  },
-  card: {
-    background: '#fff',
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 14,
-    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-    transition: 'transform .2s ease, box-shadow .2s ease',
-  },
-  time: {
-    fontSize: 13,
-    opacity: 0.7,
-    marginBottom: 4,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: 600,
-  },
-  place: {
-    fontSize: 14,
-    opacity: 0.8,
-  },
-  note: {
-    marginTop: 8,
-    fontSize: 13,
-    background: '#F3F4F6',
-    padding: '6px 8px',
-    borderRadius: 8,
-  },
-  current: {
-    borderLeft: '6px solid #4CAF50',
-    transform: 'scale(1.02)',
-  },
-  next: {
-    borderLeft: '6px solid #FFC107',
-  },
-};

@@ -1,8 +1,11 @@
 import { Clock, Bell } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 type Props = {
-  user: any;
+  user: {
+    name: string;
+    squad: string; // ГОРОД
+  };
 };
 
 type Weather = {
@@ -19,7 +22,6 @@ type ScheduleItem = {
   note?: string;
 };
 
-/* 🔗 ВСТАВЬ СВОЮ ССЫЛКУ APPS SCRIPT */
 const SCHEDULE_URL =
   'https://script.google.com/macros/s/AKfycbwY7Ddk6Wahkcq4ZtED4sQ61mvQdr5EJ03GINAlRHNpDd9GgpqH8r5OCxu0tcTYUZbo9g/exec';
 
@@ -27,15 +29,18 @@ export default function HomeMain({ user }: Props) {
   const [time, setTime] = useState(new Date());
   const [weather, setWeather] = useState<Weather | null>(null);
   const [schedule, setSchedule] = useState<ScheduleItem[]>([]);
-  const [loadingSchedule, setLoadingSchedule] = useState(true);
+  const [loading, setLoading] = useState(true);
 
-  /* ⏱ часы */
+  const warned10 = useRef(false);
+  const warned5 = useRef(false);
+
+  /* ⏱ Часы */
   useEffect(() => {
     const t = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
 
-  /* 🌤 погода */
+  /* 🌤 Погода — Витязево */
   useEffect(() => {
     async function loadWeather() {
       try {
@@ -43,190 +48,205 @@ export default function HomeMain({ user }: Props) {
           'https://api.open-meteo.com/v1/forecast?latitude=45&longitude=37.28&current_weather=true&hourly=apparent_temperature'
         );
         const data = await res.json();
-
         setWeather({
           temp: Math.round(data.current_weather.temperature),
           feels: Math.round(data.hourly.apparent_temperature[0]),
         });
       } catch {}
     }
-
     loadWeather();
   }, []);
 
-  /* 📅 расписание + кеш */
+  /* 📅 Расписание */
   useEffect(() => {
     async function loadSchedule() {
       try {
         const cached = localStorage.getItem('schedule');
-        if (cached) {
-          setSchedule(JSON.parse(cached));
-        }
+        if (cached) setSchedule(JSON.parse(cached));
 
         const res = await fetch(SCHEDULE_URL);
         const data = await res.json();
-
         setSchedule(data);
         localStorage.setItem('schedule', JSON.stringify(data));
-      } catch {
-        // если офлайн — остаётся кеш
-      } finally {
-        setLoadingSchedule(false);
+      } catch {}
+      finally {
+        setLoading(false);
       }
     }
-
     loadSchedule();
   }, []);
 
-  /* 🛠 утилиты */
-  function timeToMinutes(t: string) {
-    if (!t) return 0;
+  /* 🛠 Утилиты */
+  const timeToMin = (t: string) => {
     const [h, m] = t.split(':').map(Number);
-    return h * 60 + (m || 0);
-  }
+    return h * 60 + m;
+  };
 
-  function todayString() {
-    return time.toLocaleDateString('ru-RU');
-  }
+  const today = time.toLocaleDateString('ru-RU');
+  const nowMin = time.getHours() * 60 + time.getMinutes();
 
-  /* 📌 расписание на сегодня */
-  const todaySchedule = useMemo(() => {
-    return schedule.filter(
-      (i) => new Date(i.date).toLocaleDateString('ru-RU') === todayString()
-    );
-  }, [schedule, time]);
-
-  const nowMinutes = time.getHours() * 60 + time.getMinutes();
-
-  const currentEvents = todaySchedule.filter(
-    (i) =>
-      nowMinutes >= timeToMinutes(i.start) && nowMinutes <= timeToMinutes(i.end)
+  const todaySchedule = useMemo(
+    () =>
+      schedule.filter(
+        i => new Date(i.date).toLocaleDateString('ru-RU') === today
+      ),
+    [schedule, today]
   );
 
-  const futureEvents = todaySchedule.filter(
-    (i) => timeToMinutes(i.start) > nowMinutes
+  const current = todaySchedule.filter(
+    i => nowMin >= timeToMin(i.start) && nowMin <= timeToMin(i.end)
   );
 
-  const nextEvent =
-    futureEvents.length > 0
-      ? futureEvents.reduce((a, b) =>
-          timeToMinutes(a.start) < timeToMinutes(b.start) ? a : b
-        )
-      : null;
+  const next = todaySchedule
+    .filter(i => timeToMin(i.start) > nowMin)
+    .sort((a, b) => timeToMin(a.start) - timeToMin(b.start))[0];
 
-  const minutesToNext = nextEvent
-    ? timeToMinutes(nextEvent.start) - nowMinutes
+  const minutesToNext = next
+    ? timeToMin(next.start) - nowMin
     : null;
 
-  function warning() {
+  const weatherStatus = () => {
     if (!weather) return '';
-    if (weather.feels <= 5) return '🥶 Холодно';
+    if (weather.feels <= 10) return '🥶 Холодно';
     if (weather.feels >= 30) return '🥵 Жарко';
     return '😊 Комфортно';
-  }
+  };
+
+  /* 🧠 ИНИЦИАЛЫ */
+  const initials = user.name
+    .split(' ')
+    .map(w => w[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
 
   return (
     <div className="p-4 space-y-4">
-      {/* Приветствие */}
-      <div className="bg-gradient-to-r from-green-600 to-green-700 rounded-3xl p-6 text-white shadow">
-        <div className="flex justify-between items-center mb-4">
-          <div>
-            <h1 className="text-2xl font-bold">Привет, {user.name} 👋</h1>
-            <p className="text-green-100">Отряд № {user.squad} • Витязево</p>
+
+      {/* локальная анимация — БЕЗ tailwind.config */}
+      <style>{`
+        @keyframes breathe {
+          0%   { background-color: rgb(220 252 231); }
+          50%  { background-color: rgb(187 247 208); }
+          100% { background-color: rgb(220 252 231); }
+        }
+      `}</style>
+
+      {/* 🧡 ФИРМЕННАЯ ШАПКА */}
+      <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-3xl p-6 text-white shadow space-y-4">
+
+        <div className="text-center leading-tight">
+          <div className="font-extrabold text-xl tracking-wide">
+            ТОЧКА СБОРКИ
           </div>
-          <Bell />
+          <div className="text-xs text-white/80">
+            Республика Виталия
+          </div>
         </div>
 
-        <div className="flex justify-between items-center bg-white/10 rounded-2xl p-4">
+        {/* АВАТАР + ИМЯ */}
+        <div className="flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <Clock />
+            <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center font-bold text-lg">
+              {initials}
+            </div>
             <div>
-              <div className="text-xl font-bold">
-                {time.toLocaleTimeString('ru-RU', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </div>
-              <div className="text-sm text-green-100">
-                {time.toLocaleDateString('ru-RU', {
-                  weekday: 'long',
-                  day: 'numeric',
-                  month: 'long',
-                })}
-              </div>
+              <h1 className="text-2xl font-bold">{user.name}</h1>
+              <p className="text-sm text-white/80">
+                № города {user.squad}
+              </p>
+            </div>
+          </div>
+          <Bell className="opacity-80" />
+        </div>
+
+        <div className="flex justify-between items-center bg-white/15 rounded-2xl p-4">
+          <div>
+            <div className="text-xl font-bold">
+              {time.toLocaleTimeString('ru-RU', {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </div>
+            <div className="text-sm text-white/80">
+              {time.toLocaleDateString('ru-RU', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+              })}
             </div>
           </div>
 
           {weather && (
             <div className="text-right">
-              <div className="text-3xl font-bold">{weather.temp}°</div>
-              <div className="text-sm text-green-100">
-                ощущается {weather.feels}°
+              <div className="text-3xl font-bold">
+                {weather.temp}°
+              </div>
+              <div className="text-sm text-white/80">
+                ощущается как {weather.feels}°
+              </div>
+              <div className="text-xs text-white/70">
+                Витязево
               </div>
             </div>
           )}
         </div>
 
         {weather && (
-          <div className="mt-3 text-sm bg-white/10 rounded-xl px-3 py-2">
-            {warning()}
+          <div className="bg-white/15 rounded-xl px-3 py-2 text-sm">
+            {weatherStatus()}
           </div>
         )}
       </div>
 
-      {/* 📅 Ближайшее / текущее */}
-      <div className="bg-white rounded-2xl p-5 shadow">
-        <h3 className="font-bold mb-2">
-          📅{' '}
-          {currentEvents.length > 0 ? 'Сейчас идёт' : 'Ближайшее мероприятие'}
-        </h3>
+      {/* 📅 МЕРОПРИЯТИЯ */}
+      <div className="bg-white rounded-2xl p-5 shadow space-y-3">
 
-        {loadingSchedule && (
-          <p className="text-sm text-gray-400">Загрузка расписания…</p>
-        )}
-
-        {/* 🟢 СЕЙЧАС */}
-        {currentEvents.length > 0 && (
-          <div className="space-y-3">
-            {currentEvents.map((e, i) => (
-              <div key={i} className="border-l-4 border-green-500 pl-3">
-                <p className="font-semibold">{e.title}</p>
-                <p className="text-sm text-gray-500">
-                  {e.start} – {e.end} • {e.place}
-                </p>
-                {e.note && (
-                  <p className="text-xs text-gray-400 mt-1">💬 {e.note}</p>
-                )}
-              </div>
-            ))}
-
-            {minutesToNext !== null && (
-              <p className="text-sm text-gray-400">
-                ⏭ Следующее через {minutesToNext} мин
+        {/* 🔥 АКТИВНЫЕ — ЗЕЛЁНЫЕ + ДЫХАНИЕ */}
+        {current.map((e, i) => (
+          <div
+            key={i}
+            className="border-l-4 border-green-500 pl-3 py-2 rounded-r-xl"
+            style={{
+              animation: 'breathe 4s ease-in-out infinite',
+            }}
+          >
+            <div className="flex justify-between items-center">
+              <p className="font-bold text-green-900">
+                {e.title}
               </p>
-            )}
+              <span className="text-xs font-semibold text-green-700 bg-green-200 px-2 py-0.5 rounded-full">
+                ИДЁТ СЕЙЧАС
+              </span>
+            </div>
+            <p className="text-sm text-green-700">
+              {e.start} – {e.end} • {e.place}
+            </p>
           </div>
-        )}
+        ))}
 
-        {/* 🟡 БЛИЖАЙШЕЕ */}
-        {currentEvents.length === 0 && nextEvent && (
-          <div className="border-l-4 border-yellow-400 pl-3">
-            <p className="font-semibold">{nextEvent.title}</p>
+        {next && (
+          <div className="space-y-2">
+            <p className="font-semibold">
+              Следующее: {next.title}
+            </p>
             <p className="text-sm text-gray-500">
-              {nextEvent.start} – {nextEvent.end} • {nextEvent.place}
+              Начнётся через {minutesToNext} мин
             </p>
-            {nextEvent.note && (
-              <p className="text-xs text-gray-400 mt-1">💬 {nextEvent.note}</p>
-            )}
-            <p className="text-sm text-gray-400 mt-1">
-              🧭 Начнётся через {minutesToNext} мин
-            </p>
+
+            <div className="h-2 bg-orange-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-orange-500 transition-all"
+                style={{ width: `${Math.max(0, 100 - minutesToNext! * 5)}%` }}
+              />
+            </div>
           </div>
         )}
 
-        {/* ❌ НИЧЕГО */}
-        {!loadingSchedule && currentEvents.length === 0 && !nextEvent && (
-          <p className="text-sm text-gray-400">На сегодня больше ничего нет</p>
+        {!loading && !current.length && !next && (
+          <p className="text-sm text-gray-400">
+            На сегодня мероприятий больше нет
+          </p>
         )}
       </div>
     </div>
