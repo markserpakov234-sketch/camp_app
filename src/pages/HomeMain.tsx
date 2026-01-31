@@ -1,5 +1,5 @@
 import { Bell } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 type Props = {
   user: {
@@ -30,9 +30,6 @@ export default function HomeMain({ user }: Props) {
   const [weather, setWeather] = useState<Weather | null>(null);
   const [schedule, setSchedule] = useState<ScheduleItem[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const warned10 = useRef(false);
-  const warned5 = useRef(false);
 
   /* ⏱ Часы */
   useEffect(() => {
@@ -123,7 +120,7 @@ export default function HomeMain({ user }: Props) {
   return (
     <div className="p-4 space-y-4">
 
-      {/* локальная анимация — БЕЗ tailwind.config */}
+      {/* локальная анимация */}
       <style>{`
         @keyframes breathe {
           0%   { background-color: rgb(220 252 231); }
@@ -132,7 +129,7 @@ export default function HomeMain({ user }: Props) {
         }
       `}</style>
 
-      {/* 🧡 ФИРМЕННАЯ ШАПКА */}
+      {/* 🧡 ШАПКА */}
       <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-3xl p-6 text-white shadow space-y-4">
 
         <div className="text-center leading-tight">
@@ -144,7 +141,6 @@ export default function HomeMain({ user }: Props) {
           </div>
         </div>
 
-        {/* АВАТАР + ИМЯ */}
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center font-bold text-lg">
@@ -202,14 +198,11 @@ export default function HomeMain({ user }: Props) {
       {/* 📅 МЕРОПРИЯТИЯ */}
       <div className="bg-white rounded-2xl p-5 shadow space-y-3">
 
-        {/* 🔥 АКТИВНЫЕ — ЗЕЛЁНЫЕ + ДЫХАНИЕ */}
         {current.map((e, i) => (
           <div
             key={i}
             className="border-l-4 border-green-500 pl-3 py-2 rounded-r-xl"
-            style={{
-              animation: 'breathe 4s ease-in-out infinite',
-            }}
+            style={{ animation: 'breathe 4s ease-in-out infinite' }}
           >
             <div className="flex justify-between items-center">
               <p className="font-bold text-green-900">
