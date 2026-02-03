@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   Dice5,
   BookOpen,
+  Bus,
 } from 'lucide-react';
 
 import HomeMain from './HomeMain';
@@ -15,11 +16,13 @@ import Emergency from './Emergency';
 import Profile from './Profile';
 import GameRoom from './GameRoom';
 import Education from './Education';
+import Excursions from './Excursions';
 
 type Tab =
   | 'home'
   | 'schedule'
   | 'education'
+  | 'excursions'
   | 'map'
   | 'emergency'
   | 'games'
@@ -34,6 +37,8 @@ export default function Home({ user, onLogout }: any) {
         return <Schedule />;
       case 'education':
         return <Education />;
+      case 'excursions':
+        return <Excursions />;
       case 'games':
         return <GameRoom />;
       case 'map':
@@ -77,6 +82,13 @@ export default function Home({ user, onLogout }: any) {
           />
 
           <Menu
+            icon={Bus}
+            label="Экскурсии"
+            active={tab === 'excursions'}
+            onClick={() => setTab('excursions')}
+          />
+
+          <Menu
             icon={Dice5}
             label="Игры"
             active={tab === 'games'}
@@ -115,17 +127,12 @@ function Menu({ icon: Icon, label, onClick, active }: any) {
   return (
     <button
       onClick={onClick}
-      className={`flex flex-col items-center transition
-        ${
-          active
-            ? 'text-orange-500'
-            : 'text-gray-500'
-        }`}
+      className={`flex flex-col items-center transition ${
+        active ? 'text-orange-500' : 'text-gray-500'
+      }`}
     >
       <Icon
-        className={`w-5 h-5 mb-1 ${
-          active ? 'stroke-[2.5]' : ''
-        }`}
+        className={`w-5 h-5 mb-1 ${active ? 'stroke-[2.5]' : ''}`}
       />
       {label}
     </button>
@@ -143,20 +150,16 @@ function ProfileMenu({ user, onClick, active }: any) {
   return (
     <button
       onClick={onClick}
-      className={`flex flex-col items-center transition
-        ${
-          active
-            ? 'text-orange-500'
-            : 'text-gray-500'
-        }`}
+      className={`flex flex-col items-center transition ${
+        active ? 'text-orange-500' : 'text-gray-500'
+      }`}
     >
       <div
-        className={`w-6 h-6 mb-1 rounded-full flex items-center justify-center text-xs font-bold
-          ${
-            active
-              ? 'bg-orange-500 text-white'
-              : 'bg-gray-300 text-white'
-          }`}
+        className={`w-6 h-6 mb-1 rounded-full flex items-center justify-center text-xs font-bold ${
+          active
+            ? 'bg-orange-500 text-white'
+            : 'bg-gray-300 text-white'
+        }`}
       >
         {initials}
       </div>

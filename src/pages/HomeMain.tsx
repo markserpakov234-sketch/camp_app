@@ -242,6 +242,12 @@ export default function HomeMain({ user }: Props) {
           </p>
         )}
       </div>
+
+      {/* 🚌 ЭКСКУРСИИ (плашка) */}
+      <div className="bg-gradient-to-r from-green-500 to-purple-600 p-5 rounded-2xl space-y-2 text-white">
+        <div className="font-semibold text-lg">Экскурсии</div>
+        <p className="text-sm">Скоро будут добавлены экскурсии в этот раздел</p>
+      </div>
     </div>
   );
 }

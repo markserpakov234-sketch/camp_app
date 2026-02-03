@@ -11,30 +11,12 @@ interface ScheduleItem {
   note?: string;
 }
 
-type RawSlot = {
-  date: string;
-  time_from: string;
-  time_to: string;
-  squad: string;
-};
-
-type Slot = {
-  date: string;
-  timeFrom: string;
-  timeTo: string;
-  squad: string;
-};
-
 /* ===================== API ===================== */
 
 const SCHEDULE_API =
   'https://script.google.com/macros/s/AKfycbwY7Ddk6Wahkcq4ZtED4sQ61mvQdr5EJ03GINAlRHNpDd9GgpqH8r5OCxu0tcTYUZbo9g/exec';
 
-const POOL_API =
-  'https://script.google.com/macros/s/AKfycbwkx4Sf8SB13IWT5Ir2iy_C6XdnQP589jK5Ry3cmNPOOkH2FLHUniDtqvlzqowG03yk/exec';
-
 const SCHEDULE_CACHE = 'schedule-day-v1';
-const POOL_CACHE = 'pool-day-v1';
 
 /* ===================== HELPERS ===================== */
 
@@ -67,7 +49,7 @@ export default function Schedule() {
   const now = new Date();
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
-  const [tab, setTab] = useState<'events' | 'pool'>('events');
+  const [tab, setTab] = useState<'events'>('events');
   const [dayOffset, setDayOffset] = useState<0 | 1>(0);
 
   const selectedDate = addDays(now, dayOffset);
@@ -119,44 +101,6 @@ export default function Schedule() {
       });
     }
   }, [items, tab, dayOffset]);
-
-  /* ----------- бассейн ----------- */
-
-  const [slots, setSlots] = useState<Slot[]>([]);
-  const [loadingPool, setLoadingPool] = useState(true);
-
-  useEffect(() => {
-    const cached = localStorage.getItem(POOL_CACHE);
-    if (cached) {
-      setSlots(JSON.parse(cached));
-      setLoadingPool(false);
-    }
-
-    fetch(POOL_API)
-      .then((r) => r.json())
-      .then((raw: RawSlot[]) => {
-        const normalized = raw.map((s) => ({
-          date: formatShortDate(new Date(s.date)),
-          timeFrom: s.time_from,
-          timeTo: s.time_to,
-          squad: s.squad,
-        }));
-
-        setSlots(normalized);
-        localStorage.setItem(
-          POOL_CACHE,
-          JSON.stringify(normalized)
-        );
-        setLoadingPool(false);
-      })
-      .catch(() => setLoadingPool(false));
-  }, []);
-
-  const daySlots = useMemo(() => {
-    return slots.filter(
-      (s) => s.date === selectedDateShort
-    );
-  }, [slots, selectedDateShort]);
 
   /* ===================== RENDER ===================== */
 
@@ -211,17 +155,6 @@ export default function Schedule() {
               }`}
           >
             МЕРОПРИЯТИЯ
-          </button>
-          <button
-            onClick={() => setTab('pool')}
-            className={`flex-1 py-2 rounded-xl text-sm font-bold
-              ${
-                tab === 'pool'
-                  ? 'bg-orange-500 text-white'
-                  : 'text-gray-500'
-              }`}
-          >
-            БАССЕЙН
           </button>
         </div>
       </div>
@@ -289,54 +222,6 @@ export default function Schedule() {
                     {isCurrent && (
                       <span className="inline-block mt-2 text-xs font-bold bg-green-600 text-white px-3 py-1 rounded-full">
                         ИДЁТ СЕЙЧАС
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-          </>
-        )}
-
-        {tab === 'pool' && (
-          <>
-            {loadingPool && (
-              <div className="text-sm text-gray-400 animate-pulse">
-                Загружаю бассейн…
-              </div>
-            )}
-
-            {!loadingPool &&
-              daySlots.map((slot, i) => {
-                const start = timeToMinutes(slot.timeFrom);
-                const end = timeToMinutes(slot.timeTo);
-
-                const isCurrent =
-                  dayOffset === 0 &&
-                  currentMinutes >= start &&
-                  currentMinutes < end;
-
-                return (
-                  <div
-                    key={i}
-                    className={`bg-white rounded-2xl p-4 shadow flex justify-between
-                      ${
-                        isCurrent
-                          ? 'border-2 border-green-500 bg-green-50'
-                          : ''
-                      }`}
-                  >
-                    <div>
-                      <div className="font-semibold">
-                        {slot.timeFrom}–{slot.timeTo}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        ГОРОД № {slot.squad || '—'}
-                      </div>
-                    </div>
-
-                    {isCurrent && (
-                      <span className="text-xs font-bold bg-green-600 text-white px-3 py-1 rounded-full">
-                        СЕЙЧАС
                       </span>
                     )}
                   </div>
