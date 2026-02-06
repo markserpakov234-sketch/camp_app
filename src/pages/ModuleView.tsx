@@ -1,246 +1,160 @@
-import { useState } from 'react';
-import { CheckCircle2 } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 
-import { modules } from '../learning/training';
 import type {
-  LessonBlock,
+  TrainingModuleContent,
+  TrainingBlock,
   TextBlock,
-  ChecklistBlock,
+  TipBlock,
+  ExampleBlock,
   ChoiceBlock,
+  ChecklistBlock,
 } from '../learning/training/types';
+
+import { trainingModules } from '../learning/training'; // ✅ правильный источник
 
 type Props = {
   moduleId: string;
+  onBack: () => void;
 };
 
-export default function ModuleView({ moduleId }: Props) {
-  const module = modules.find((m) => m.id === moduleId);
+export default function ModuleView({ moduleId, onBack }: Props) {
+  const module = useMemo<TrainingModuleContent | undefined>(
+    () => trainingModules.find(m => m.id === moduleId),
+    [moduleId]
+  );
 
-  const [checkProgress, setCheckProgress] = useState<
-    Record<string, boolean>
-  >({});
+  const [step, setStep] = useState(0);
 
   if (!module) {
     return (
-      <div className="p-6 text-sm text-gray-500">
-        Модуль не найден
+      <div className="p-6 text-white">
+        <button onClick={onBack} className="mb-4 flex items-center gap-2">
+          <ArrowLeft size={18} /> Назад
+        </button>
+        <p>Модуль не найден</p>
       </div>
     );
   }
 
+  const block = module.blocks[step];
+
+  const next = () => {
+    if (step < module.blocks.length - 1) {
+      setStep(s => s + 1);
+    }
+  };
+
   return (
-    <div className="p-4 space-y-6">
-      {/* ЗАГОЛОВОК МОДУЛЯ */}
-      <div
-        className="rounded-3xl p-6 text-white shadow"
-        style={{
-          background: module.meta.gradient,
-        }}
-      >
+    <div className="min-h-screen bg-gradient-to-b from-violet-600 to-purple-800 p-4 text-white">
+      {/* HEADER */}
+      <div className="mb-6 flex items-center gap-3">
+        <button onClick={onBack}>
+          <ArrowLeft />
+        </button>
         <h1 className="text-xl font-bold">{module.title}</h1>
-        {module.subtitle && (
-          <p className="text-sm opacity-90 mt-1">
-            {module.subtitle}
-          </p>
-        )}
       </div>
 
-      {/* БЛОКИ */}
-      <div className="space-y-4">
-        {module.blocks.map((block, index) => (
-          <BlockRenderer
-            key={index}
-            block={block}
-            index={index}
-            progress={checkProgress}
-            setProgress={setCheckProgress}
-            moduleId={module.id}
-          />
-        ))}
+      {/* CONTENT */}
+      <div className="rounded-3xl bg-white/15 backdrop-blur p-6">
+        {renderBlock(block)}
+      </div>
+
+      {/* FOOTER */}
+      <div className="mt-6 flex justify-between items-center">
+        <span className="text-sm opacity-80">
+          {step + 1} / {module.blocks.length}
+        </span>
+
+        {step < module.blocks.length - 1 && (
+          <button
+            onClick={next}
+            className="rounded-xl bg-white text-purple-700 px-5 py-2 font-semibold"
+          >
+            Следующее
+          </button>
+        )}
+
+        {step === module.blocks.length - 1 && (
+          <div className="flex items-center gap-2 text-green-300">
+            <CheckCircle2 /> Модуль пройден
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-/* ================================================= */
-/* 🧩 РЕНДЕРЕР БЛОКОВ */
-/* ================================================= */
+/* ---------------- RENDER BLOCK ---------------- */
 
-function BlockRenderer({
-  block,
-  index,
-  progress,
-  setProgress,
-  moduleId,
-}: {
-  block: LessonBlock;
-  index: number;
-  progress: Record<string, boolean>;
-  setProgress: React.Dispatch<
-    React.SetStateAction<Record<string, boolean>>
-  >;
-  moduleId: string;
-}) {
+function renderBlock(block: TrainingBlock) {
+  // TEXT (без type)
+  if (!('type' in block)) {
+    const b = block as TextBlock;
+    return <p className="text-lg leading-relaxed whitespace-pre-line">{b.text}</p>;
+  }
+
   switch (block.type) {
-    case 'text':
-      return <TextBlockView block={block} />;
-
-    case 'tip':
-      return <TipBlockView block={block} />;
-
-    case 'example':
-      return <ExampleBlockView block={block} />;
-
-    case 'checklist':
+    case 'tip': {
+      const b = block as TipBlock;
       return (
-        <ChecklistBlockView
-          block={block}
-          index={index}
-          progress={progress}
-          setProgress={setProgress}
-          moduleId={moduleId}
-        />
+        <div className="rounded-2xl bg-white/20 p-4">
+          <p className="font-semibold">💡 Подсказка</p>
+          <p className="mt-2 whitespace-pre-line">{b.text}</p>
+        </div>
       );
+    }
 
-    case 'choice':
-      return <ChoiceBlockView block={block} />;
+    case 'example': {
+      const b = block as ExampleBlock;
+      return (
+        <div className="rounded-2xl bg-white/10 p-4">
+          <p className="font-semibold">Пример</p>
+          <p className="mt-2 whitespace-pre-line">{b.text}</p>
+        </div>
+      );
+    }
+
+    case 'choice': {
+      const b = block as ChoiceBlock;
+      return (
+        <div>
+          <p className="mb-4 font-semibold">{b.question}</p>
+          <div className="space-y-2">
+            {b.options.map(option => (
+              <button
+                key={option.id}
+                className="w-full rounded-xl bg-white/20 px-4 py-3 text-left"
+              >
+                {option.text}
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    case 'checklist': {
+      const b = block as ChecklistBlock;
+      return (
+        <div>
+          <p className="mb-4 font-semibold">{b.title}</p>
+          <div className="space-y-3">
+            {b.items.map(item => (
+              <label
+                key={item.id}
+                className="flex items-center gap-3 rounded-xl bg-white/10 px-4 py-3"
+              >
+                <input type="checkbox" />
+                <span>{item.text}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      );
+    }
 
     default:
       return null;
   }
-}
-
-/* ================================================= */
-/* 📄 TEXT */
-/* ================================================= */
-
-function TextBlockView({ block }: { block: TextBlock }) {
-  return (
-    <div className="bg-white/80 backdrop-blur rounded-3xl p-4 text-gray-800">
-      <p className="text-sm leading-relaxed whitespace-pre-line">
-        {block.text}
-      </p>
-    </div>
-  );
-}
-
-/* ================================================= */
-/* 💡 TIP */
-/* ================================================= */
-
-function TipBlockView({ block }: { block: TextBlock }) {
-  return (
-    <div className="bg-orange-50 rounded-3xl p-4 border-l-4 border-orange-400">
-      <p className="text-sm text-orange-900 whitespace-pre-line">
-        {block.text}
-      </p>
-    </div>
-  );
-}
-
-/* ================================================= */
-/* 📘 EXAMPLE */
-/* ================================================= */
-
-function ExampleBlockView({ block }: { block: TextBlock }) {
-  return (
-    <div className="bg-purple-50 rounded-3xl p-4 border-l-4 border-purple-400">
-      <p className="text-sm text-purple-900 whitespace-pre-line">
-        {block.text}
-      </p>
-    </div>
-  );
-}
-
-/* ================================================= */
-/* ☑️ CHECKLIST */
-/* ================================================= */
-
-function ChecklistBlockView({
-  block,
-  index,
-  progress,
-  setProgress,
-  moduleId,
-}: {
-  block: ChecklistBlock;
-  index: number;
-  progress: Record<string, boolean>;
-  setProgress: React.Dispatch<
-    React.SetStateAction<Record<string, boolean>>
-  >;
-  moduleId: string;
-}) {
-  return (
-    <div className="bg-white rounded-3xl p-4 shadow-sm space-y-3">
-      <h3 className="font-medium text-gray-800">
-        {block.title}
-      </h3>
-
-      <div className="space-y-2">
-        {block.items.map((item, i) => {
-          const id = `${moduleId}:${index}:${i}`;
-          const checked = progress[id];
-
-          return (
-            <label
-              key={id}
-              className="flex items-start gap-3 cursor-pointer text-sm"
-            >
-              <input
-                type="checkbox"
-                checked={!!checked}
-                onChange={() =>
-                  setProgress((prev) => ({
-                    ...prev,
-                    [id]: !prev[id],
-                  }))
-                }
-                className="mt-1"
-              />
-
-              <span
-                className={
-                  checked
-                    ? 'line-through text-gray-400'
-                    : 'text-gray-700'
-                }
-              >
-                {item}
-              </span>
-
-              {checked && (
-                <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5" />
-              )}
-            </label>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-/* ================================================= */
-/* ❓ CHOICE */
-/* ================================================= */
-
-function ChoiceBlockView({ block }: { block: ChoiceBlock }) {
-  return (
-    <div className="bg-white rounded-3xl p-4 shadow-sm space-y-3">
-      <p className="font-medium text-gray-800">
-        {block.question}
-      </p>
-
-      <div className="space-y-2">
-        {block.options.map((option) => (
-          <button
-            key={option.id}
-            className="w-full text-left px-4 py-3 rounded-2xl bg-gray-100 hover:bg-gray-200 text-sm"
-          >
-            {option.text}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
 }
