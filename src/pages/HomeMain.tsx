@@ -1,10 +1,10 @@
-import { Bell } from 'lucide-react';
+import { Bell, Clock, MapPin, CloudSun } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 type Props = {
   user: {
     name: string;
-    squad: string; // ГОРОД
+    squad: string;
   };
 };
 
@@ -37,7 +37,7 @@ export default function HomeMain({ user }: Props) {
     return () => clearInterval(t);
   }, []);
 
-  /* 🌤 Погода — Витязево */
+  /* 🌤 Погода */
   useEffect(() => {
     async function loadWeather() {
       try {
@@ -104,12 +104,11 @@ export default function HomeMain({ user }: Props) {
 
   const weatherStatus = () => {
     if (!weather) return '';
-    if (weather.feels <= 10) return '🥶 Холодно';
-    if (weather.feels >= 30) return '🥵 Жарко';
+    if (weather.feels <= 10) return ' Холодно';
+    if (weather.feels >= 30) return ' Жарко';
     return '😊 Комфортно';
   };
 
-  /* 🧠 ИНИЦИАЛЫ */
   const initials = user.name
     .split(' ')
     .map(w => w[0])
@@ -118,47 +117,38 @@ export default function HomeMain({ user }: Props) {
     .toUpperCase();
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="relative min-h-screen p-4 space-y-4 overflow-hidden">
 
-      {/* локальная анимация */}
-      <style>{`
-        @keyframes breathe {
-          0%   { background-color: rgb(220 252 231); }
-          50%  { background-color: rgb(187 247 208); }
-          100% { background-color: rgb(220 252 231); }
-        }
-      `}</style>
+      {/* 🌈 ФОН */}
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute -top-40 -left-40 w-[420px] h-[420px] bg-orange-300/50 rounded-full blur-3xl" />
+        <div className="absolute top-1/3 -right-40 w-[420px] h-[420px] bg-purple-300/50 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-1/4 w-[360px] h-[360px] bg-pink-300/40 rounded-full blur-3xl" />
+      </div>
 
-      {/* 🧡 ШАПКА */}
-      <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-3xl p-6 text-white shadow space-y-4">
-
-        <div className="text-center leading-tight">
-          <div className="font-extrabold text-xl tracking-wide">
-            ТОЧКА СБОРКИ
-          </div>
-          <div className="text-xs text-white/80">
-            Республика Виталия
-          </div>
-        </div>
+      {/* 🧡 ШАПКА ПРОФИЛЯ */}
+      <div className="rounded-3xl p-6 text-white shadow bg-gradient-to-br from-orange-500 via-orange-400 to-pink-500 space-y-4">
 
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center font-bold text-lg">
+            <div className="w-12 h-12 rounded-full bg-white/25 flex items-center justify-center font-bold text-lg">
               {initials}
             </div>
             <div>
-              <h1 className="text-2xl font-bold">{user.name}</h1>
+              <h1 className="text-xl font-semibold">
+                {user.name}
+              </h1>
               <p className="text-sm text-white/80">
                 № города {user.squad}
               </p>
             </div>
           </div>
-          <Bell className="opacity-80" />
+          <Bell className="opacity-90" />
         </div>
 
-        <div className="flex justify-between items-center bg-white/15 rounded-2xl p-4">
+        <div className="flex justify-between items-center bg-white/20 rounded-2xl p-4">
           <div>
-            <div className="text-xl font-bold">
+            <div className="text-2xl font-bold">
               {time.toLocaleTimeString('ru-RU', {
                 hour: '2-digit',
                 minute: '2-digit',
@@ -175,11 +165,12 @@ export default function HomeMain({ user }: Props) {
 
           {weather && (
             <div className="text-right">
-              <div className="text-3xl font-bold">
+              <div className="flex items-center gap-1 justify-end text-2xl font-bold">
+                <CloudSun className="w-5 h-5" />
                 {weather.temp}°
               </div>
-              <div className="text-sm text-white/80">
-                ощущается как {weather.feels}°
+              <div className="text-xs text-white/80">
+                ощущается {weather.feels}°
               </div>
               <div className="text-xs text-white/70">
                 Витязево
@@ -189,64 +180,76 @@ export default function HomeMain({ user }: Props) {
         </div>
 
         {weather && (
-          <div className="bg-white/15 rounded-xl px-3 py-2 text-sm">
+          <div className="text-sm text-white/90">
             {weatherStatus()}
           </div>
         )}
       </div>
 
       {/* 📅 МЕРОПРИЯТИЯ */}
-      <div className="bg-white rounded-2xl p-5 shadow space-y-3">
+      <div className="space-y-3">
 
         {current.map((e, i) => (
           <div
             key={i}
-            className="border-l-4 border-green-500 pl-3 py-2 rounded-r-xl"
-            style={{ animation: 'breathe 4s ease-in-out infinite' }}
+            className="rounded-3xl p-4 bg-white/70 backdrop-blur shadow-sm border-l-4 border-green-400"
           >
             <div className="flex justify-between items-center">
-              <p className="font-bold text-green-900">
+              <p className="font-medium text-gray-800">
                 {e.title}
               </p>
-              <span className="text-xs font-semibold text-green-700 bg-green-200 px-2 py-0.5 rounded-full">
-                ИДЁТ СЕЙЧАС
+              <span className="text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
+                Идёт сейчас
               </span>
             </div>
-            <p className="text-sm text-green-700">
-              {e.start} – {e.end} • {e.place}
-            </p>
+
+            <div className="mt-1 flex items-center gap-2 text-sm text-gray-500">
+              <Clock className="w-4 h-4" />
+              {e.start} – {e.end}
+            </div>
+
+            <div className="mt-1 flex items-center gap-2 text-sm text-gray-500">
+              <MapPin className="w-4 h-4" />
+              {e.place}
+            </div>
           </div>
         ))}
 
         {next && (
-          <div className="space-y-2">
-            <p className="font-semibold">
+          <div className="rounded-3xl p-4 bg-white/70 backdrop-blur shadow-sm space-y-2">
+            <p className="font-medium text-gray-800">
               Следующее: {next.title}
             </p>
             <p className="text-sm text-gray-500">
               Начнётся через {minutesToNext} мин
             </p>
 
-            <div className="h-2 bg-orange-100 rounded-full overflow-hidden">
+            <div className="h-1.5 bg-purple-100 rounded-full overflow-hidden">
               <div
-                className="h-full bg-orange-500 transition-all"
-                style={{ width: `${Math.max(0, 100 - minutesToNext! * 5)}%` }}
+                className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all"
+                style={{
+                  width: `${Math.max(0, 100 - minutesToNext! * 5)}%`,
+                }}
               />
             </div>
           </div>
         )}
 
         {!loading && !current.length && !next && (
-          <p className="text-sm text-gray-400">
+          <div className="text-sm text-gray-400 text-center py-6">
             На сегодня мероприятий больше нет
-          </p>
+          </div>
         )}
       </div>
 
-      {/* 🚌 ЭКСКУРСИИ (плашка) */}
-      <div className="bg-gradient-to-r from-green-500 to-purple-600 p-5 rounded-2xl space-y-2 text-white">
-        <div className="font-semibold text-lg">Экскурсии</div>
-        <p className="text-sm">Скоро будут добавлены экскурсии в этот раздел</p>
+      {/* 🚌 ЭКСКУРСИИ */}
+      <div className="rounded-3xl p-5 text-white shadow bg-gradient-to-br from-green-500 to-purple-500">
+        <div className="font-semibold text-lg">
+          Экскурсии
+        </div>
+        <p className="text-sm text-white/90">
+          Скоро будут добавлены экскурсии в этот раздел
+        </p>
       </div>
     </div>
   );

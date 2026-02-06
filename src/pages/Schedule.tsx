@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import {
+  CalendarDays,
+  Clock,
+  MapPin,
+  Info,
+} from 'lucide-react';
 
 /* ===================== ТИПЫ ===================== */
 
@@ -16,13 +22,15 @@ interface ScheduleItem {
 const SCHEDULE_API =
   'https://script.google.com/macros/s/AKfycbwY7Ddk6Wahkcq4ZtED4sQ61mvQdr5EJ03GINAlRHNpDd9GgpqH8r5OCxu0tcTYUZbo9g/exec';
 
-const SCHEDULE_CACHE = 'schedule-day-v1';
-
 /* ===================== HELPERS ===================== */
 
 function timeToMinutes(t: string) {
   const [h, m] = t.split(':').map(Number);
   return h * 60 + m;
+}
+
+function formatShortDate(d: Date) {
+  return d.toLocaleDateString('ru-RU');
 }
 
 function formatLongDate(d: Date) {
@@ -33,41 +41,45 @@ function formatLongDate(d: Date) {
   });
 }
 
-function formatShortDate(d: Date) {
-  return d.toLocaleDateString('ru-RU');
-}
-
 function addDays(date: Date, days: number) {
   const d = new Date(date);
   d.setDate(d.getDate() + days);
   return d;
 }
 
+function formatCountdown(diff: number) {
+  if (diff <= 0) return 'начинается';
+
+  const h = Math.floor(diff / 60);
+  const m = diff % 60;
+
+  if (h > 0) return `через ${h} ч ${m.toString().padStart(2, '0')} мин`;
+  return `через ${m} мин`;
+}
+
 /* ===================== COMPONENT ===================== */
 
 export default function Schedule() {
-  const now = new Date();
+  const [tick, setTick] = useState(Date.now());
+
+  useEffect(() => {
+    const i = setInterval(() => setTick(Date.now()), 60_000);
+    return () => clearInterval(i);
+  }, []);
+
+  const now = new Date(tick);
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
-  const [tab, setTab] = useState<'events'>('events');
   const [dayOffset, setDayOffset] = useState<0 | 1>(0);
-
   const selectedDate = addDays(now, dayOffset);
   const selectedDateShort = formatShortDate(selectedDate);
 
-  /* ----------- мероприятия ----------- */
-
   const [items, setItems] = useState<ScheduleItem[]>([]);
-  const [loadingSchedule, setLoadingSchedule] = useState(true);
+  const [loading, setLoading] = useState(true);
+
   const currentRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const cached = localStorage.getItem(SCHEDULE_CACHE);
-    if (cached) {
-      setItems(JSON.parse(cached));
-      setLoadingSchedule(false);
-    }
-
     fetch(SCHEDULE_API)
       .then((r) => r.json())
       .then((data: ScheduleItem[]) => {
@@ -84,151 +96,159 @@ export default function Schedule() {
           );
 
         setItems(filtered);
-        localStorage.setItem(
-          SCHEDULE_CACHE,
-          JSON.stringify(filtered)
-        );
-        setLoadingSchedule(false);
+        setLoading(false);
       })
-      .catch(() => setLoadingSchedule(false));
+      .catch(() => setLoading(false));
   }, [selectedDateShort]);
 
   useEffect(() => {
-    if (tab === 'events' && dayOffset === 0) {
-      currentRef.current?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-      });
-    }
-  }, [items, tab, dayOffset]);
-
-  /* ===================== RENDER ===================== */
+    currentRef.current?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+    });
+  }, [items, dayOffset]);
 
   let nextFound = false;
 
   return (
-    <div className="bg-gray-100 min-h-screen pb-24">
+    <div className="min-h-screen pb-24 bg-gradient-to-b from-orange-100 via-white to-white">
 
-      {/* ===== ЛИПКАЯ ВЕРХНЯЯ ЧАСТЬ ===== */}
-      <div className="sticky top-0 z-20 bg-gray-100 px-4 pt-4 space-y-3">
-        {/* ДАТА */}
-        <div className="text-lg font-semibold">
-          {dayOffset === 0 ? 'Сегодня' : 'Завтра'},{' '}
-          {formatLongDate(selectedDate)}
+      {/* ===== ШАПКА ===== */}
+      <div className="sticky top-0 z-20 p-4 bg-white/80 backdrop-blur">
+        <div className="rounded-3xl bg-white shadow-sm p-4 space-y-1">
+          <div className="flex items-center gap-2 text-orange-500 font-medium">
+            <CalendarDays className="w-5 h-5" />
+            {dayOffset === 0 ? 'Сегодня' : 'Завтра'}
+          </div>
+          <div className="text-sm text-gray-600">
+            {formatLongDate(selectedDate)}
+          </div>
         </div>
 
-        {/* ПЕРЕКЛЮЧЕНИЕ ДНЯ */}
-        <div className="flex bg-white rounded-2xl p-1 shadow">
+        <div className="mt-3 flex bg-gray-100 rounded-2xl p-1">
           <button
             onClick={() => setDayOffset(0)}
-            className={`flex-1 py-2 rounded-xl text-sm font-bold
-              ${
-                dayOffset === 0
-                  ? 'bg-orange-500 text-white'
-                  : 'text-gray-500'
-              }`}
+            className={`flex-1 py-2 rounded-xl text-sm ${
+              dayOffset === 0
+                ? 'bg-orange-400 text-white'
+                : 'text-gray-500'
+            }`}
           >
             Сегодня
           </button>
           <button
             onClick={() => setDayOffset(1)}
-            className={`flex-1 py-2 rounded-xl text-sm font-bold
-              ${
-                dayOffset === 1
-                  ? 'bg-orange-500 text-white'
-                  : 'text-gray-500'
-              }`}
+            className={`flex-1 py-2 rounded-xl text-sm ${
+              dayOffset === 1
+                ? 'bg-orange-400 text-white'
+                : 'text-gray-500'
+            }`}
           >
             Завтра
           </button>
         </div>
-
-        {/* ПЕРЕКЛЮЧЕНИЕ РАЗДЕЛА */}
-        <div className="flex bg-white rounded-2xl p-1 shadow">
-          <button
-            onClick={() => setTab('events')}
-            className={`flex-1 py-2 rounded-xl text-sm font-bold
-              ${
-                tab === 'events'
-                  ? 'bg-orange-500 text-white'
-                  : 'text-gray-500'
-              }`}
-          >
-            МЕРОПРИЯТИЯ
-          </button>
-        </div>
       </div>
 
-      {/* ===== КОНТЕНТ ===== */}
+      {/* ===== СПИСОК ===== */}
       <div className="p-4 space-y-4">
-
-        {tab === 'events' && (
-          <>
-            {loadingSchedule && (
-              <div className="text-sm text-gray-400 animate-pulse">
-                Загружаю расписание…
-              </div>
-            )}
-
-            {!loadingSchedule &&
-              items.map((item, i) => {
-                const start = timeToMinutes(item.start);
-                const end = timeToMinutes(item.end);
-
-                const isCurrent =
-                  dayOffset === 0 &&
-                  currentMinutes >= start &&
-                  currentMinutes <= end;
-
-                const isNext =
-                  dayOffset === 0 &&
-                  !isCurrent &&
-                  !nextFound &&
-                  currentMinutes < start;
-
-                if (isNext) nextFound = true;
-
-                return (
-                  <div
-                    key={i}
-                    ref={isCurrent ? currentRef : null}
-                    className={`rounded-2xl p-4 shadow
-                      ${
-                        isCurrent
-                          ? 'bg-green-50 border-l-4 border-green-500 scale-[1.02]'
-                          : isNext
-                          ? 'bg-orange-50 border-l-4 border-orange-400'
-                          : 'bg-white'
-                      }`}
-                  >
-                    <div className="text-xs text-gray-500">
-                      {item.start} – {item.end}
-                    </div>
-
-                    <div className="font-semibold">
-                      {item.title}
-                    </div>
-
-                    <div className="text-sm text-gray-600">
-                      {item.place}
-                    </div>
-
-                    {item.note && (
-                      <div className="mt-2 text-xs bg-gray-100 rounded-lg px-2 py-1">
-                        💬 {item.note}
-                      </div>
-                    )}
-
-                    {isCurrent && (
-                      <span className="inline-block mt-2 text-xs font-bold bg-green-600 text-white px-3 py-1 rounded-full">
-                        ИДЁТ СЕЙЧАС
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-          </>
+        {loading && (
+          <div className="text-sm text-gray-400">
+            Загружаю расписание…
+          </div>
         )}
+
+        {!loading &&
+          items.map((item, i) => {
+            const start = timeToMinutes(item.start);
+            const end = timeToMinutes(item.end);
+
+            const isCurrent =
+              dayOffset === 0 &&
+              currentMinutes >= start &&
+              currentMinutes <= end;
+
+            const isNext =
+              dayOffset === 0 &&
+              !isCurrent &&
+              !nextFound &&
+              currentMinutes < start;
+
+            if (isNext) nextFound = true;
+
+            const diff = start - currentMinutes;
+
+            const progress =
+              isNext && diff <= 60
+                ? Math.min(100, ((60 - diff) / 60) * 100)
+                : 0;
+
+            return (
+              <div
+                key={i}
+                ref={isCurrent ? currentRef : null}
+                className={`rounded-3xl p-4 shadow-sm transition
+                  ${
+                    isCurrent
+                      ? 'bg-green-50'
+                      : isNext
+                      ? 'bg-violet-50'
+                      : 'bg-white'
+                  }`}
+              >
+                {/* BADGE */}
+                {isCurrent && (
+                  <div className="mb-2 inline-block text-xs px-3 py-1 rounded-full bg-green-200 text-green-800">
+                    Идёт сейчас
+                  </div>
+                )}
+
+                {isNext && !isCurrent && (
+                  <div className="mb-2 inline-block text-xs px-3 py-1 rounded-full bg-violet-200 text-violet-800">
+                    Следующее
+                  </div>
+                )}
+
+                {/* TIME */}
+                <div className="flex items-center gap-2 text-xs text-gray-500">
+                  <Clock className="w-3.5 h-3.5" />
+                  {item.start} – {item.end}
+                </div>
+
+                <div className="mt-1 text-base font-medium text-gray-800">
+                  {item.title}
+                </div>
+
+                <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
+                  <MapPin className="w-4 h-4" />
+                  {item.place}
+                </div>
+
+                {/* ⏱ ТАЙМЕР */}
+                {isNext && (
+                  <>
+                    <div className="mt-3 text-xs text-violet-700">
+                      Начнётся {formatCountdown(diff)}
+                    </div>
+
+                    <div className="mt-2 h-1.5 rounded-full bg-violet-100 overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-violet-400 to-purple-500 transition-all"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* NOTE */}
+                {item.note && (
+                  <div className="mt-3 flex items-start gap-2 text-xs bg-gray-100 text-gray-700 rounded-xl px-3 py-2">
+                    <Info className="w-4 h-4 mt-0.5 shrink-0" />
+                    <span>{item.note}</span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
       </div>
     </div>
   );

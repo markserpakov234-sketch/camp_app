@@ -1,22 +1,37 @@
+export type TextBlock = {
+  type?: undefined;
+  text: string;
+};
+
+export type TipBlock = {
+  type: 'tip';
+  text: string;
+};
+
+export type ExampleBlock = {
+  type: 'example';
+  text: string;
+};
+
+export type ChoiceBlock = {
+  type: 'choice';
+  question: string;
+  options: string[];
+  correctIndex?: number; // ← ТОЛЬКО ЭТО
+};
+
+export type ChecklistBlock = {
+  type: 'checklist';
+  title: string;
+  items: string[];
+};
+
 export type LessonBlock =
-  | {
-      /** обычный текстовый блок */
-      text: string;
-      type?: undefined;
-    }
-  | {
-      type: 'tip';
-      text: string;
-    }
-  | {
-      type: 'example';
-      text: string;
-    }
-  | {
-      type: 'choice';
-      question: string;
-      options: string[];
-    };
+  | TextBlock
+  | TipBlock
+  | ExampleBlock
+  | ChoiceBlock
+  | ChecklistBlock;
 
 export type TrainingModuleContent = {
   id: string;

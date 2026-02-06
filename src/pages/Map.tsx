@@ -40,8 +40,8 @@ function FlyToPoint({ point }: { point: LatLng | null }) {
   return null;
 }
 
-/* === ИКОНКИ В СТИЛЕ VITA === */
-const icon = (emoji: string, bg: string) =>
+/* === SVG ИКОНКИ (ВМЕСТО ЭМОДЖИ) === */
+const svgIcon = (path: string, bg: string) =>
   new L.DivIcon({
     html: `
       <div style="
@@ -52,10 +52,17 @@ const icon = (emoji: string, bg: string) =>
         display:flex;
         align-items:center;
         justify-content:center;
-        box-shadow:0 4px 10px rgba(0,0,0,.25);
-        font-size:18px;
-        color:white;
-      ">${emoji}</div>
+        box-shadow:0 6px 16px rgba(0,0,0,.25);
+      ">
+        <svg width="18" height="18" viewBox="0 0 24 24"
+          fill="none"
+          stroke="white"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round">
+          ${path}
+        </svg>
+      </div>
     `,
     className: '',
     iconSize: [36, 36],
@@ -63,16 +70,17 @@ const icon = (emoji: string, bg: string) =>
     popupAnchor: [0, -34],
   });
 
+/* === ИКОНКИ ОБЪЕКТОВ === */
 const ICONS = {
-  medical: icon('🩺', '#E11D48'),
-  pool: icon('🏊', '#0EA5E9'),
-  edu: icon('🧠', '#8B5CF6'),
-  food: icon('🍽', '#F59E0B'),
-  shop: icon('🛍', '#F97316'),
-  home: icon('🏠', '#10B981'),
-  gate: icon('🚪', '#64748B'),
-  sport: icon('🏃', '#22C55E'),
-  default: icon('📍', '#FB923C'),
+  medical: svgIcon('<path d="M12 2v20M2 12h20" />', '#E11D48'),
+  pool: svgIcon('<path d="M2 18c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2" />', '#0EA5E9'),
+  edu: svgIcon('<path d="M12 3l9 4.5-9 4.5-9-4.5L12 3z" /><path d="M21 10v6" />', '#8B5CF6'),
+  food: svgIcon('<path d="M3 3h18v4H3z" /><path d="M8 7v14" />', '#F59E0B'),
+  shop: svgIcon('<path d="M6 2l1 5h10l1-5" /><path d="M3 7h18v13H3z" />', '#F97316'),
+  home: svgIcon('<path d="M3 12l9-9 9 9v9H3z" />', '#10B981'),
+  gate: svgIcon('<path d="M6 3h12v18H6z" />', '#64748B'),
+  sport: svgIcon('<path d="M4 20l16-16" /><path d="M14 4h6v6" />', '#22C55E'),
+  default: svgIcon('<circle cx="12" cy="12" r="8" />', '#FB923C'),
 };
 
 function getIconByName(name: string) {
@@ -81,7 +89,7 @@ function getIconByName(name: string) {
   if (n.includes('изолятор') || n.includes('анализ')) return ICONS.medical;
   if (n.includes('центр') || n.includes('мк')) return ICONS.edu;
   if (n.includes('магазин') || n.includes('сувенир')) return ICONS.shop;
-  if (n.includes('кают') || n.includes('столов')) return ICONS.food;
+  if (n.includes('столов')) return ICONS.food;
   if (n.includes('корпус') || n.includes('республика')) return ICONS.home;
   if (n.includes('ворота')) return ICONS.gate;
   if (n.includes('бфп') || n.includes('бп') || n.includes('мфп'))
@@ -101,13 +109,13 @@ export default function Map() {
 
   return (
     <div className="fixed inset-0 bg-white">
-      {/* 🟧 ВЕРХ */}
-      <div className="absolute top-0 left-0 right-0 z-30 px-4 pt-3 pointer-events-none">
-        <div className="rounded-2xl bg-orange-500 text-white px-4 py-3 shadow-lg pointer-events-auto text-center">
-          <div className="text-sm font-bold uppercase tracking-wide">
-            КАРТА ЛАГЕРЯ
+      {/* 🔝 ВЕРХ */}
+      <div className="absolute top-0 left-0 right-0 z-40 px-4 pt-3">
+        <div className="relative rounded-2xl bg-orange-500 text-white px-4 py-3 shadow-lg">
+          <div className="text-sm font-bold uppercase tracking-wide text-center">
+            Карта лагеря
           </div>
-          <div className="text-xs opacity-90 mb-2">
+          <div className="text-xs opacity-90 mb-2 text-center">
             Найди объект или нажми на карту
           </div>
 
@@ -119,7 +127,7 @@ export default function Map() {
           />
 
           {query && (
-            <div className="mt-2 max-h-48 overflow-auto rounded-xl bg-white text-gray-800 text-left">
+            <div className="absolute left-0 right-0 mt-2 max-h-56 overflow-auto rounded-xl bg-white text-gray-800 shadow-lg z-50">
               {filteredPoints.length === 0 && (
                 <div className="px-3 py-2 text-sm text-gray-400">
                   Ничего не найдено
@@ -132,7 +140,7 @@ export default function Map() {
                     setSelectedPoint([p.lat, p.lng]);
                     setQuery('');
                   }}
-                  className="block w-full px-3 py-2 text-sm hover:bg-orange-50"
+                  className="block w-full px-3 py-2 text-sm text-left hover:bg-orange-50"
                 >
                   {p.name}
                 </button>
@@ -151,7 +159,7 @@ export default function Map() {
           zoomControl={false}
         >
           <TileLayer
-            attribution="© OpenStreetMap contributors"
+            attribution="© OpenStreetMap"
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
 

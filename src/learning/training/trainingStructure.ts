@@ -9,22 +9,38 @@ export const trainingStructure = [
   },
   {
     id: 'age',
-    title: 'Возраст и реакции',
-  },
-  {
-    id: 'game',
-    title: 'Игра как инструмент',
-  },
-  {
-    id: 'creativity',
-    title: 'Креатив и импровизация',
-  },
-  {
-    id: 'conflicts',
-    title: 'Сложные ситуации',
+    title: 'Они разные — и это нормально',
   },
   {
     id: 'shiftLogic',
     title: 'Логика смены',
+  },
+  {
+    id: 'game',
+    title: 'Через игру — к команде',
+  },
+  {
+    id: 'creativity',
+    title: 'Креатив, который работает',
+  },
+  {
+    id: 'conflicts',
+    title: 'Когда что-то пошло не так',
+  },
+  {
+    id: 'language',
+    title: 'Язык вожатого',
+  },
+  {
+    id: 'borders',
+    title: 'Границы и ответственность',
+  },
+  {
+    id: 'team',
+    title: 'Работа в команде',
+  },
+  {
+    id: 'state',
+    title: 'Состояние вожатого',
   },
 ];
