@@ -1,17 +1,8 @@
 import { useMemo, useState } from 'react';
 import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 
-import type {
-  TrainingModuleContent,
-  TrainingBlock,
-  TextBlock,
-  TipBlock,
-  ExampleBlock,
-  ChoiceBlock,
-  ChecklistBlock,
-} from '../learning/training/types';
-
-import { trainingModules } from '../learning/training'; // ✅ правильный источник
+import type { TrainingModuleContent } from '../learning/training/types';
+import modules from '../learning/training'; // 👈 default export
 
 type Props = {
   moduleId: string;
@@ -20,7 +11,7 @@ type Props = {
 
 export default function ModuleView({ moduleId, onBack }: Props) {
   const module = useMemo<TrainingModuleContent | undefined>(
-    () => trainingModules.find(m => m.id === moduleId),
+    () => modules.find((m: TrainingModuleContent) => m.id === moduleId),
     [moduleId]
   );
 
@@ -38,12 +29,6 @@ export default function ModuleView({ moduleId, onBack }: Props) {
   }
 
   const block = module.blocks[step];
-
-  const next = () => {
-    if (step < module.blocks.length - 1) {
-      setStep(s => s + 1);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-violet-600 to-purple-800 p-4 text-white">
@@ -68,7 +53,7 @@ export default function ModuleView({ moduleId, onBack }: Props) {
 
         {step < module.blocks.length - 1 && (
           <button
-            onClick={next}
+            onClick={() => setStep(s => s + 1)}
             className="rounded-xl bg-white text-purple-700 px-5 py-2 font-semibold"
           >
             Следующее
@@ -85,76 +70,72 @@ export default function ModuleView({ moduleId, onBack }: Props) {
   );
 }
 
-/* ---------------- RENDER BLOCK ---------------- */
+/* ---------------- BLOCK RENDER ---------------- */
 
-function renderBlock(block: TrainingBlock) {
-  // TEXT (без type)
-  if (!('type' in block)) {
-    const b = block as TextBlock;
-    return <p className="text-lg leading-relaxed whitespace-pre-line">{b.text}</p>;
+function renderBlock(block: any) {
+  // TEXT — без type
+  if (!block.type) {
+    return (
+      <p className="text-lg leading-relaxed whitespace-pre-line">
+        {block.text}
+      </p>
+    );
   }
 
-  switch (block.type) {
-    case 'tip': {
-      const b = block as TipBlock;
-      return (
-        <div className="rounded-2xl bg-white/20 p-4">
-          <p className="font-semibold">💡 Подсказка</p>
-          <p className="mt-2 whitespace-pre-line">{b.text}</p>
-        </div>
-      );
-    }
-
-    case 'example': {
-      const b = block as ExampleBlock;
-      return (
-        <div className="rounded-2xl bg-white/10 p-4">
-          <p className="font-semibold">Пример</p>
-          <p className="mt-2 whitespace-pre-line">{b.text}</p>
-        </div>
-      );
-    }
-
-    case 'choice': {
-      const b = block as ChoiceBlock;
-      return (
-        <div>
-          <p className="mb-4 font-semibold">{b.question}</p>
-          <div className="space-y-2">
-            {b.options.map(option => (
-              <button
-                key={option.id}
-                className="w-full rounded-xl bg-white/20 px-4 py-3 text-left"
-              >
-                {option.text}
-              </button>
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    case 'checklist': {
-      const b = block as ChecklistBlock;
-      return (
-        <div>
-          <p className="mb-4 font-semibold">{b.title}</p>
-          <div className="space-y-3">
-            {b.items.map(item => (
-              <label
-                key={item.id}
-                className="flex items-center gap-3 rounded-xl bg-white/10 px-4 py-3"
-              >
-                <input type="checkbox" />
-                <span>{item.text}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    default:
-      return null;
+  if (block.type === 'tip') {
+    return (
+      <div className="rounded-2xl bg-white/20 p-4">
+        <p className="font-semibold mb-2">💡 Подсказка</p>
+        <p className="whitespace-pre-line">{block.text}</p>
+      </div>
+    );
   }
+
+  if (block.type === 'example') {
+    return (
+      <div className="rounded-2xl bg-white/10 p-4">
+        <p className="font-semibold mb-2">Пример</p>
+        <p className="whitespace-pre-line">{block.text}</p>
+      </div>
+    );
+  }
+
+  if (block.type === 'choice') {
+    return (
+      <div>
+        <p className="mb-4 font-semibold">{block.question}</p>
+        <div className="space-y-2">
+          {block.options.map((option: string, i: number) => (
+            <button
+              key={i}
+              className="w-full rounded-xl bg-white/20 px-4 py-3 text-left"
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (block.type === 'checklist') {
+    return (
+      <div>
+        <p className="mb-4 font-semibold">{block.title}</p>
+        <div className="space-y-3">
+          {block.items.map((item: string, i: number) => (
+            <label
+              key={i}
+              className="flex items-center gap-3 rounded-xl bg-white/10 px-4 py-3"
+            >
+              <input type="checkbox" />
+              <span>{item}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return null;
 }
