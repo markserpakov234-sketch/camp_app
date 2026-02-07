@@ -11,16 +11,18 @@ type Props = {
 };
 
 export default function ModuleView({ moduleId, onBack }: Props) {
-  const module = modules.find((m) => m.id === moduleId);
+  const foundModule = modules.find((m) => m.id === moduleId);
+
+  // 🔒 безопасное narrowing
+  if (!foundModule) return null;
+
+  const module = foundModule;
   const meta = moduleMeta[moduleId];
 
   const [step, setStep] = useState<number>(0);
   const [completed, setCompleted] = useState<boolean>(false);
-
   const [selectedChoice, setSelectedChoice] = useState<number | null>(null);
   const [checkedItems, setCheckedItems] = useState<number[]>([]);
-
-  if (!module) return null;
 
   const block = module.blocks[step];
 
@@ -49,13 +51,18 @@ export default function ModuleView({ moduleId, onBack }: Props) {
     }
   }
 
-  const canProceed =
-    !('type' in block) ||
-    block.type === 'tip' ||
-    block.type === 'example' ||
-    (block.type === 'choice' && selectedChoice !== null) ||
-    (block.type === 'checklist' &&
-      checkedItems.length === block.items.length);
+  // ✅ корректный narrowing
+  let canProceed = false;
+
+  if (!('type' in block)) {
+    canProceed = true;
+  } else if (block.type === 'tip' || block.type === 'example') {
+    canProceed = true;
+  } else if (block.type === 'choice') {
+    canProceed = selectedChoice !== null;
+  } else if (block.type === 'checklist') {
+    canProceed = checkedItems.length === block.items.length;
+  }
 
   function renderBlock(block: LessonBlock) {
     if (!('type' in block)) {
@@ -102,7 +109,7 @@ export default function ModuleView({ moduleId, onBack }: Props) {
                   w-full rounded-2xl px-5 py-4 text-left transition-all duration-200
                   ${
                     selectedChoice === i
-                      ? `bg-gradient-to-r ${meta?.gradient} text-white shadow-lg scale-[1.02]`
+                      ? `bg-gradient-to-r ${meta?.gradient ?? ''} text-white shadow-lg scale-[1.02]`
                       : 'bg-white/80 hover:bg-white shadow-md hover:shadow-lg'
                   }
                 `}
@@ -134,7 +141,7 @@ export default function ModuleView({ moduleId, onBack }: Props) {
                     flex items-center gap-4 px-4 py-3 rounded-2xl cursor-pointer transition-all duration-200
                     ${
                       checked
-                        ? `bg-gradient-to-r ${meta?.gradient} text-white shadow-lg scale-[1.01]`
+                        ? `bg-gradient-to-r ${meta?.gradient ?? ''} text-white shadow-lg scale-[1.01]`
                         : 'bg-white/80 shadow hover:shadow-md'
                     }
                   `}
@@ -174,7 +181,7 @@ export default function ModuleView({ moduleId, onBack }: Props) {
 
           <button
             onClick={onBack}
-            className={`px-8 py-3 rounded-2xl text-white shadow-lg transition hover:scale-105 bg-gradient-to-r ${meta?.gradient}`}
+            className={`px-8 py-3 rounded-2xl text-white shadow-lg transition hover:scale-105 bg-gradient-to-r ${meta?.gradient ?? ''}`}
           >
             Вернуться к обучению
           </button>
@@ -185,17 +192,12 @@ export default function ModuleView({ moduleId, onBack }: Props) {
 
   return (
     <div className="relative min-h-screen overflow-hidden px-4 py-8">
-      {/* фоновые blur-пятна */}
       <div className="absolute -top-24 -left-24 w-80 h-80 bg-orange-300 rounded-full blur-3xl opacity-20" />
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-300 rounded-full blur-3xl opacity-20" />
 
       <div className="relative z-10 max-w-2xl mx-auto space-y-8">
-        {/* градиентная линия */}
-        <div
-          className={`h-2 rounded-full bg-gradient-to-r ${meta?.gradient}`}
-        />
+        <div className={`h-2 rounded-full bg-gradient-to-r ${meta?.gradient ?? ''}`} />
 
-        {/* заголовок */}
         <div className="space-y-3">
           <h1 className="text-3xl font-extrabold text-neutral-900">
             {module.title}
@@ -203,7 +205,7 @@ export default function ModuleView({ moduleId, onBack }: Props) {
 
           <div className="h-2 bg-neutral-200 rounded-full overflow-hidden">
             <div
-              className={`h-full bg-gradient-to-r ${meta?.gradient} transition-all duration-500`}
+              className={`h-full bg-gradient-to-r ${meta?.gradient ?? ''} transition-all duration-500`}
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -213,12 +215,10 @@ export default function ModuleView({ moduleId, onBack }: Props) {
           </p>
         </div>
 
-        {/* карточка контента */}
         <div className="rounded-3xl bg-white/80 backdrop-blur-xl border border-white/60 shadow-[0_20px_60px_rgba(0,0,0,0.08)] p-8 transition-all duration-300">
           {renderBlock(block)}
         </div>
 
-        {/* навигация */}
         <div className="flex justify-between items-center">
           <button
             disabled={step === 0}
@@ -235,7 +235,7 @@ export default function ModuleView({ moduleId, onBack }: Props) {
               px-8 py-3 rounded-2xl text-white shadow-lg transition-all duration-200
               ${
                 canProceed
-                  ? `bg-gradient-to-r ${meta?.gradient} hover:scale-105`
+                  ? `bg-gradient-to-r ${meta?.gradient ?? ''} hover:scale-105`
                   : 'bg-neutral-300 cursor-not-allowed'
               }
             `}
