@@ -27,6 +27,8 @@ const sectionIcons: Record<ChecklistSection['id'], React.ReactNode> = {
 
 export default function Checklists() {
   const [query, setQuery] = useState('');
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+
   const [progress, setProgress] = useState<Progress>(() => {
     try {
       const saved = localStorage.getItem('checklist-progress');
@@ -94,6 +96,13 @@ export default function Checklists() {
             section={section}
             progress={progress}
             setProgress={setProgress}
+            isOpen={query ? true : openSections[section.id] ?? false}
+            toggleOpen={() =>
+              setOpenSections((prev) => ({
+                ...prev,
+                [section.id]: !prev[section.id],
+              }))
+            }
           />
         ))}
 
@@ -115,127 +124,146 @@ function ChecklistSectionBlock({
   section,
   progress,
   setProgress,
+  isOpen,
+  toggleOpen,
 }: {
   section: ChecklistSection;
   progress: Progress;
   setProgress: React.Dispatch<React.SetStateAction<Progress>>;
+  isOpen: boolean;
+  toggleOpen: () => void;
 }) {
   const [open, setOpen] = useState<Record<string, boolean>>({});
 
   return (
     <div className="space-y-3">
-      <div>
-        <div className="flex items-center gap-2 mb-1">
-          {sectionIcons[section.id]}
-          <h2 className="text-lg font-medium text-gray-900">
-            {section.title}
-          </h2>
+      {/* SECTION HEADER */}
+      <button
+        onClick={toggleOpen}
+        className="w-full flex items-center justify-between text-left"
+      >
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            {sectionIcons[section.id]}
+            <h2 className="text-lg font-medium text-gray-900">
+              {section.title}
+            </h2>
+          </div>
+
+          {section.subtitle && (
+            <p className="text-sm text-gray-500">{section.subtitle}</p>
+          )}
         </div>
 
-        {section.subtitle && (
-          <p className="text-sm text-gray-500">{section.subtitle}</p>
-        )}
-      </div>
+        <ChevronDown
+          className={`w-5 h-5 text-gray-400 transition ${
+            isOpen ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
 
-      <div className="space-y-4">
-        {section.checklists.map((checklist) => {
-          const isOpen = open[checklist.id] ?? false;
+      {/* SECTION BODY */}
+      {isOpen && (
+        <div className="space-y-4">
+          {section.checklists.map((checklist) => {
+            const isChecklistOpen = open[checklist.id] ?? false;
 
-          const completedCount = checklist.items.filter((_, index) => {
-            const id = `${section.id}:${checklist.id}:${index}`;
-            return progress[id];
-          }).length;
+            const completedCount = checklist.items.filter((_, index) => {
+              const id = `${section.id}:${checklist.id}:${index}`;
+              return progress[id];
+            }).length;
 
-          const completed =
-            checklist.items.length > 0 &&
-            completedCount === checklist.items.length;
+            const completed =
+              checklist.items.length > 0 &&
+              completedCount === checklist.items.length;
 
-          return (
-            <div
-              key={checklist.id}
-              className={`rounded-3xl bg-white shadow-sm transition ${
-                completed ? 'opacity-60' : ''
-              }`}
-            >
-              {/* HEADER */}
-              <button
-                onClick={() =>
-                  setOpen((prev) => ({
-                    ...prev,
-                    [checklist.id]: !prev[checklist.id],
-                  }))
-                }
-                className="w-full flex items-center justify-between p-4 text-left"
+            return (
+              <div
+                key={checklist.id}
+                className={`rounded-3xl bg-white shadow-sm transition ${
+                  completed ? 'opacity-60' : ''
+                }`}
               >
-                <div className="space-y-0.5">
-                  <h3 className="text-base font-normal text-gray-800">
-                    {checklist.title}
-                  </h3>
+                {/* CHECKLIST HEADER */}
+                <button
+                  onClick={() =>
+                    setOpen((prev) => ({
+                      ...prev,
+                      [checklist.id]: !prev[checklist.id],
+                    }))
+                  }
+                  className="w-full flex items-center justify-between p-4 text-left"
+                >
+                  <div className="space-y-0.5">
+                    <h3 className="text-base font-normal text-gray-800">
+                      {checklist.title}
+                    </h3>
 
-                  {checklist.description && (
-                    <p className="text-xs text-gray-500">
-                      {checklist.description}
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-2">
-                  {completed && (
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
-                  )}
-                  <ChevronDown
-                    className={`w-4 h-4 text-gray-400 transition ${
-                      isOpen ? 'rotate-180' : ''
-                    }`}
-                  />
-                </div>
-              </button>
-
-              {/* BODY */}
-              {isOpen && (
-                <div className="px-4 pb-4 space-y-2">
-                  {checklist.items.map((item, index) => {
-                    const itemId = `${section.id}:${checklist.id}:${index}`;
-
-                    return (
-                      <label
-                        key={itemId}
-                        className="flex items-start gap-3 text-sm cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={!!progress[itemId]}
-                          onChange={() =>
-                            setProgress((prev) => ({
-                              ...prev,
-                              [itemId]: !prev[itemId],
-                            }))
-                          }
-                          className="mt-1"
-                        />
-
-                        <span
-                          className={
-                            progress[itemId]
-                              ? 'line-through text-gray-400'
-                              : 'text-gray-700'
-                          }
-                        >
-                          {item}
-                        </span>
-                      </label>
-                    );
-                  })}
-
-                  <div className="pt-2 text-xs text-gray-400">
-                    {completedCount} / {checklist.items.length} выполнено
+                    {checklist.description && (
+                      <p className="text-xs text-gray-500">
+                        {checklist.description}
+                      </p>
+                    )}
                   </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+
+                  <div className="flex items-center gap-2">
+                    {completed && (
+                      <CheckCircle2 className="w-4 h-4 text-green-500" />
+                    )}
+                    <ChevronDown
+                      className={`w-4 h-4 text-gray-400 transition ${
+                        isChecklistOpen ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </div>
+                </button>
+
+                {/* CHECKLIST BODY */}
+                {isChecklistOpen && (
+                  <div className="px-4 pb-4 space-y-2">
+                    {checklist.items.map((item, index) => {
+                      const itemId = `${section.id}:${checklist.id}:${index}`;
+
+                      return (
+                        <label
+                          key={itemId}
+                          className="flex items-start gap-3 text-sm cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={!!progress[itemId]}
+                            onChange={() =>
+                              setProgress((prev) => ({
+                                ...prev,
+                                [itemId]: !prev[itemId],
+                              }))
+                            }
+                            className="mt-1"
+                          />
+
+                          <span
+                            className={
+                              progress[itemId]
+                                ? 'line-through text-gray-400'
+                                : 'text-gray-700'
+                            }
+                          >
+                            {item}
+                          </span>
+                        </label>
+                      );
+                    })}
+
+                    <div className="pt-2 text-xs text-gray-400">
+                      {completedCount} / {checklist.items.length} выполнено
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
