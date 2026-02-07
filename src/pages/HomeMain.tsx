@@ -31,13 +31,11 @@ export default function HomeMain({ user }: Props) {
   const [schedule, setSchedule] = useState<ScheduleItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  /* ⏱ Часы */
   useEffect(() => {
     const t = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
 
-  /* 🌤 Погода */
   useEffect(() => {
     async function loadWeather() {
       try {
@@ -54,7 +52,6 @@ export default function HomeMain({ user }: Props) {
     loadWeather();
   }, []);
 
-  /* 📅 Расписание */
   useEffect(() => {
     async function loadSchedule() {
       try {
@@ -73,7 +70,6 @@ export default function HomeMain({ user }: Props) {
     loadSchedule();
   }, []);
 
-  /* 🛠 Утилиты */
   const timeToMin = (t: string) => {
     const [h, m] = t.split(':').map(Number);
     return h * 60 + m;
@@ -117,21 +113,24 @@ export default function HomeMain({ user }: Props) {
     .toUpperCase();
 
   return (
-    <div className="relative min-h-screen p-4 space-y-4 overflow-hidden">
+    <div className="relative min-h-screen p-4 space-y-4 overflow-hidden bg-[#FDFBF7]">
 
-      {/* 🌈 ФОН */}
+      {/* ГЛУБОКИЙ ВЕСЕННИЙ ФОН */}
       <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute -top-40 -left-40 w-[420px] h-[420px] bg-orange-300/50 rounded-full blur-3xl" />
-        <div className="absolute top-1/3 -right-40 w-[420px] h-[420px] bg-purple-300/50 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-1/4 w-[360px] h-[360px] bg-pink-300/40 rounded-full blur-3xl" />
+        <div className="absolute -top-40 -left-40 w-[480px] h-[480px] bg-[#FFD6A5]/60 rounded-full blur-3xl" />
+        <div className="absolute top-1/3 -right-40 w-[480px] h-[480px] bg-[#A78BFA]/50 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-1/4 w-[420px] h-[420px] bg-[#34D399]/40 rounded-full blur-3xl" />
       </div>
 
-      {/* 🧡 ШАПКА ПРОФИЛЯ */}
-      <div className="rounded-3xl p-6 text-white shadow bg-gradient-to-br from-orange-500 via-orange-400 to-pink-500 space-y-4">
+      {/* HEADER */}
+      <div className="relative overflow-hidden rounded-3xl p-6 text-white
+        bg-gradient-to-br from-[#FF8A3D] via-[#F97316] to-[#A855F7]
+        shadow-[0_25px_70px_rgba(249,115,22,0.45)]
+        space-y-4">
 
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-white/25 flex items-center justify-center font-bold text-lg">
+            <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center font-bold text-lg">
               {initials}
             </div>
             <div>
@@ -146,7 +145,7 @@ export default function HomeMain({ user }: Props) {
           <Bell className="opacity-90" />
         </div>
 
-        <div className="flex justify-between items-center bg-white/20 rounded-2xl p-4">
+        <div className="flex justify-between items-center bg-white/15 backdrop-blur-md rounded-2xl p-4">
           <div>
             <div className="text-2xl font-bold">
               {time.toLocaleTimeString('ru-RU', {
@@ -166,7 +165,7 @@ export default function HomeMain({ user }: Props) {
           {weather && (
             <div className="text-right">
               <div className="flex items-center gap-1 justify-end text-2xl font-bold">
-                <CloudSun className="w-5 h-5" />
+                <CloudSun className="w-5 h-5 text-yellow-300" />
                 {weather.temp}°
               </div>
               <div className="text-xs text-white/80">
@@ -186,19 +185,19 @@ export default function HomeMain({ user }: Props) {
         )}
       </div>
 
-      {/* 📅 МЕРОПРИЯТИЯ */}
+      {/* МЕРОПРИЯТИЯ */}
       <div className="space-y-3">
 
         {current.map((e, i) => (
           <div
             key={i}
-            className="rounded-3xl p-4 bg-white/70 backdrop-blur shadow-sm border-l-4 border-green-400"
+            className="rounded-3xl p-4 bg-white shadow-md border-l-4 border-emerald-500"
           >
             <div className="flex justify-between items-center">
-              <p className="font-medium text-gray-800">
+              <p className="font-semibold text-gray-800">
                 {e.title}
               </p>
-              <span className="text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
+              <span className="text-xs text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
                 Идёт сейчас
               </span>
             </div>
@@ -216,17 +215,17 @@ export default function HomeMain({ user }: Props) {
         ))}
 
         {next && (
-          <div className="rounded-3xl p-4 bg-white/70 backdrop-blur shadow-sm space-y-2">
-            <p className="font-medium text-gray-800">
+          <div className="rounded-3xl p-4 bg-white shadow-md space-y-2">
+            <p className="font-semibold text-gray-800">
               Следующее: {next.title}
             </p>
             <p className="text-sm text-gray-500">
               Начнётся через {minutesToNext} мин
             </p>
 
-            <div className="h-1.5 bg-purple-100 rounded-full overflow-hidden">
+            <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all"
+                className="h-full bg-gradient-to-r from-emerald-500 via-sky-400 to-violet-500 transition-all"
                 style={{
                   width: `${Math.max(0, 100 - minutesToNext! * 5)}%`,
                 }}
@@ -242,8 +241,9 @@ export default function HomeMain({ user }: Props) {
         )}
       </div>
 
-      {/* 🚌 ЭКСКУРСИИ */}
-      <div className="rounded-3xl p-5 text-white shadow bg-gradient-to-br from-green-500 to-purple-500">
+      {/* ЭКСКУРСИИ */}
+      <div className="rounded-3xl p-5 text-white shadow-lg
+        bg-gradient-to-br from-emerald-500 to-violet-500">
         <div className="font-semibold text-lg">
           Экскурсии
         </div>
@@ -251,6 +251,7 @@ export default function HomeMain({ user }: Props) {
           Скоро будут добавлены экскурсии в этот раздел
         </p>
       </div>
+
     </div>
   );
 }
