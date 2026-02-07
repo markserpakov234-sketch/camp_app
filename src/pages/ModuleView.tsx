@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 
 import type { TrainingModuleContent } from '../learning/training/types';
-import modules from '../learning/training'; // 👈 default export
+import { modules } from '../learning/training'; // ✅ named export
 
 type Props = {
   moduleId: string;
@@ -11,7 +11,7 @@ type Props = {
 
 export default function ModuleView({ moduleId, onBack }: Props) {
   const module = useMemo<TrainingModuleContent | undefined>(
-    () => modules.find((m: TrainingModuleContent) => m.id === moduleId),
+    () => modules.find((m) => m.id === moduleId),
     [moduleId]
   );
 
@@ -53,7 +53,7 @@ export default function ModuleView({ moduleId, onBack }: Props) {
 
         {step < module.blocks.length - 1 && (
           <button
-            onClick={() => setStep(s => s + 1)}
+            onClick={() => setStep((s) => s + 1)}
             className="rounded-xl bg-white text-purple-700 px-5 py-2 font-semibold"
           >
             Следующее
@@ -73,7 +73,9 @@ export default function ModuleView({ moduleId, onBack }: Props) {
 /* ---------------- BLOCK RENDER ---------------- */
 
 function renderBlock(block: any) {
-  // TEXT — без type
+  if (!block) return null;
+
+  // TEXT (без type)
   if (!block.type) {
     return (
       <p className="text-lg leading-relaxed whitespace-pre-line">
