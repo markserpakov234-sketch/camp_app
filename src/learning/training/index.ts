@@ -29,3 +29,12 @@ export const modules: TrainingModuleContent[] = [
 // 👇 ВАЖНО
 export * from './progress';
 export * from './structure';
+export type {
+  LessonBlock,
+  TrainingModuleContent,
+  TextBlock,
+  TipBlock,
+  ExampleBlock,
+  ChoiceBlock,
+  ChecklistBlock,
+} from './types';

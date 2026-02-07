@@ -22,6 +22,8 @@ interface ScheduleItem {
 const SCHEDULE_API =
   'https://script.google.com/macros/s/AKfycbwY7Ddk6Wahkcq4ZtED4sQ61mvQdr5EJ03GINAlRHNpDd9GgpqH8r5OCxu0tcTYUZbo9g/exec';
 
+const CACHE_KEY = 'schedule_cache_v1';
+
 /* ===================== HELPERS ===================== */
 
 function timeToMinutes(t: string) {
@@ -60,46 +62,60 @@ function formatCountdown(diff: number) {
 /* ===================== COMPONENT ===================== */
 
 export default function Schedule() {
-  const [tick, setTick] = useState(Date.now());
-
-  useEffect(() => {
-    const i = setInterval(() => setTick(Date.now()), 60_000);
-    return () => clearInterval(i);
-  }, []);
-
-  const now = new Date(tick);
+  const now = new Date();
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
   const [dayOffset, setDayOffset] = useState<0 | 1>(0);
   const selectedDate = addDays(now, dayOffset);
   const selectedDateShort = formatShortDate(selectedDate);
 
+  const [allData, setAllData] = useState<ScheduleItem[]>([]);
   const [items, setItems] = useState<ScheduleItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   const currentRef = useRef<HTMLDivElement | null>(null);
 
+  /* ===== ЗАГРУЗКА С КЭШЕМ ===== */
+
   useEffect(() => {
+    const cached = localStorage.getItem(CACHE_KEY);
+
+    if (cached) {
+      const parsed: ScheduleItem[] = JSON.parse(cached);
+      setAllData(parsed);
+      setLoading(false);
+      return;
+    }
+
     fetch(SCHEDULE_API)
       .then((r) => r.json())
       .then((data: ScheduleItem[]) => {
-        const filtered = data
-          .filter(
-            (i) =>
-              formatShortDate(new Date(i.date)) ===
-              selectedDateShort
-          )
-          .sort(
-            (a, b) =>
-              timeToMinutes(a.start) -
-              timeToMinutes(b.start)
-          );
-
-        setItems(filtered);
+        localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+        setAllData(data);
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [selectedDateShort]);
+  }, []);
+
+  /* ===== ФИЛЬТРАЦИЯ ПО ДНЮ (БЕЗ FETCH) ===== */
+
+  useEffect(() => {
+    const filtered = allData
+      .filter(
+        (i) =>
+          formatShortDate(new Date(i.date)) ===
+          selectedDateShort
+      )
+      .sort(
+        (a, b) =>
+          timeToMinutes(a.start) -
+          timeToMinutes(b.start)
+      );
+
+    setItems(filtered);
+  }, [allData, selectedDateShort]);
+
+  /* ===== СКРОЛЛ К ТЕКУЩЕМУ ===== */
 
   useEffect(() => {
     currentRef.current?.scrollIntoView({
@@ -195,7 +211,6 @@ export default function Schedule() {
                       : 'bg-white'
                   }`}
               >
-                {/* BADGE */}
                 {isCurrent && (
                   <div className="mb-2 inline-block text-xs px-3 py-1 rounded-full bg-green-200 text-green-800">
                     Идёт сейчас
@@ -208,7 +223,6 @@ export default function Schedule() {
                   </div>
                 )}
 
-                {/* TIME */}
                 <div className="flex items-center gap-2 text-xs text-gray-500">
                   <Clock className="w-3.5 h-3.5" />
                   {item.start} – {item.end}
@@ -223,7 +237,6 @@ export default function Schedule() {
                   {item.place}
                 </div>
 
-                {/* ⏱ ТАЙМЕР */}
                 {isNext && (
                   <>
                     <div className="mt-3 text-xs text-violet-700">
@@ -239,7 +252,6 @@ export default function Schedule() {
                   </>
                 )}
 
-                {/* NOTE */}
                 {item.note && (
                   <div className="mt-3 flex items-start gap-2 text-xs bg-gray-100 text-gray-700 rounded-xl px-3 py-2">
                     <Info className="w-4 h-4 mt-0.5 shrink-0" />

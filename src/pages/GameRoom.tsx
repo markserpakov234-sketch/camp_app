@@ -28,18 +28,14 @@ export default function GameRoom() {
   const [activeCategory, setActiveCategory] =
     useState<Category>('Знакомство');
   const [ageFilter, setAgeFilter] = useState<AgeFilter>('Все');
-
   const [favorites, setFavorites] = useState<string[]>([]);
   const [opened, setOpened] = useState<string[]>([]);
-
   const gameRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  /* ---------- ИГРА ДНЯ ---------- */
   const gameOfDay = useMemo(() => {
     return games[Math.floor(Math.random() * games.length)];
   }, []);
 
-  /* ---------- localStorage ---------- */
   useEffect(() => {
     const saved = localStorage.getItem('favoriteGames');
     if (saved) setFavorites(JSON.parse(saved));
@@ -49,37 +45,40 @@ export default function GameRoom() {
     localStorage.setItem('favoriteGames', JSON.stringify(favorites));
   }, [favorites]);
 
-  /* ---------- АВТОСВОРАЧИВАНИЕ ---------- */
   useEffect(() => {
     setOpened([]);
   }, [activeCategory, ageFilter]);
 
   const toggleFavorite = (id: string) => {
     setFavorites((prev) =>
-      prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]
+      prev.includes(id)
+        ? prev.filter((f) => f !== id)
+        : [...prev, id]
     );
   };
 
   const toggleOpen = (id: string) => {
     setOpened((prev) =>
-      prev.includes(id) ? prev.filter((o) => o !== id) : [...prev, id]
+      prev.includes(id)
+        ? prev.filter((o) => o !== id)
+        : [...prev, id]
     );
   };
 
   const isFavorite = (id: string) => favorites.includes(id);
   const isOpen = (id: string) => opened.includes(id);
 
-  /* ---------- фильтрация ---------- */
   let visibleGames =
     activeCategory === '❤️ Избранное'
       ? games.filter((g) => favorites.includes(g.id))
       : games.filter((g) => g.category === activeCategory);
 
   if (ageFilter !== 'Все') {
-    visibleGames = visibleGames.filter((g) => g.age.includes(ageFilter));
+    visibleGames = visibleGames.filter((g) =>
+      g.age.includes(ageFilter)
+    );
   }
 
-  /* ---------- клик по игре дня ---------- */
   function openGameOfDay() {
     setActiveCategory(gameOfDay.category as Category);
     setAgeFilter('Все');
@@ -94,230 +93,146 @@ export default function GameRoom() {
   }
 
   return (
-    <div style={{ padding: 16, maxWidth: 1100, margin: '0 auto' }}>
-      {/* 🟧 ВЕРХНЯЯ ПЛАШКА */}
-      <div
-        style={{
-          background: '#f97316',
-          color: '#fff',
-          borderRadius: 24,
-          padding: 20,
-          marginBottom: 20,
-          boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
-        }}
-      >
-        <div style={{ fontSize: 14, opacity: 0.9 }}>
-          ИГРОТЕКА · ТОЧКА СБОРКИ
-        </div>
-        <div style={{ fontSize: 26, fontWeight: 800 }}>
-          Во что играем сегодня?
-        </div>
-      </div>
+    <div className="relative min-h-screen overflow-hidden">
+      {/* 🎨 фон */}
+      <div className="absolute -top-24 -left-24 w-72 h-72 bg-orange-300 rounded-full blur-3xl opacity-30" />
+      <div className="absolute top-40 -right-24 w-80 h-80 bg-purple-300 rounded-full blur-3xl opacity-25" />
+      <div className="absolute bottom-20 left-10 w-72 h-72 bg-yellow-200 rounded-full blur-3xl opacity-30" />
 
-      {/* 🍀 ИГРА ДНЯ */}
-      <div
-        onClick={openGameOfDay}
-        style={{
-          borderRadius: 22,
-          padding: 18,
-          marginBottom: 26,
-          cursor: 'pointer',
-          background: '#ecfdf5',
-          boxShadow: '0 10px 24px rgba(0,0,0,0.08)',
-          transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'translateY(-2px)';
-          e.currentTarget.style.boxShadow =
-            '0 14px 30px rgba(0,0,0,0.12)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'translateY(0)';
-          e.currentTarget.style.boxShadow =
-            '0 10px 24px rgba(0,0,0,0.08)';
-        }}
-      >
+      <div className="relative z-10 max-w-6xl mx-auto px-4 py-6 space-y-6">
+        
+        {/* 🟧 Шапка */}
+        <div className="rounded-3xl p-6 bg-white/70 backdrop-blur-md shadow-sm border border-white/40">
+          <div className="text-sm font-semibold text-orange-500">
+            ИГРОТЕКА · ТОЧКА СБОРКИ
+          </div>
+          <h1 className="text-3xl font-extrabold text-gray-800 mt-1">
+            Во что играем сегодня?
+          </h1>
+        </div>
+
+        {/* 🍀 Игра дня */}
         <div
-          style={{
-            fontSize: 12,
-            fontWeight: 800,
-            color: '#16a34a',
-            letterSpacing: 0.6,
-          }}
+          onClick={openGameOfDay}
+          className="rounded-3xl p-5 bg-gradient-to-br from-emerald-100 to-green-200 cursor-pointer transition hover:shadow-xl hover:-translate-y-1"
         >
-          ИГРА ДНЯ
+          <div className="text-xs font-bold text-emerald-700 tracking-wide">
+            ИГРА ДНЯ
+          </div>
+          <div className="text-xl font-extrabold text-emerald-900">
+            {gameOfDay.title}
+          </div>
+          <div className="text-sm text-emerald-700">
+            Нажми — откроется описание
+          </div>
         </div>
-        <div
-          style={{
-            fontSize: 20,
-            fontWeight: 800,
-            color: '#065f46',
-          }}
-        >
-          {gameOfDay.title}
-        </div>
-        <div style={{ fontSize: 13, color: '#047857' }}>
-          Нажми — откроется описание
-        </div>
-      </div>
 
-      {/* ---------- Категории ---------- */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-        {categories.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setActiveCategory(cat)}
-            style={{
-              padding: '8px 16px',
-              borderRadius: 999,
-              border: 'none',
-              cursor: 'pointer',
-              fontWeight: 600,
-              background:
-                activeCategory === cat ? '#f97316' : '#ffedd5',
-              color:
-                activeCategory === cat ? '#ffffff' : '#9a3412',
-            }}
-          >
-            {cat}
-          </button>
-        ))}
-      </div>
-
-      {/* ---------- Возраст ---------- */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 24 }}>
-        {ageFilters.map((age) => (
-          <button
-            key={age}
-            onClick={() => setAgeFilter(age)}
-            style={{
-              padding: '6px 12px',
-              borderRadius: 999,
-              border: 'none',
-              fontSize: 13,
-              cursor: 'pointer',
-              background:
-                ageFilter === age ? '#22c55e' : '#dcfce7',
-              color: '#166534',
-              fontWeight: 600,
-            }}
-          >
-            {age}
-          </button>
-        ))}
-      </div>
-
-      {/* ---------- Карточки ---------- */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-          gap: 16,
-        }}
-      >
-        {visibleGames.map((game) => {
-          const open = isOpen(game.id);
-          const fav = isFavorite(game.id);
-
-          return (
-            <div
-              key={game.id}
-              ref={(el) => {
-                gameRefs.current[game.id] = el;
-              }}
-              style={{
-                background: '#ffffff',
-                borderRadius: 22,
-                padding: 16,
-                boxShadow: '0 8px 22px rgba(0,0,0,0.08)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 10,
-              }}
+        {/* Категории */}
+        <div className="flex flex-wrap gap-2">
+          {categories.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setActiveCategory(cat)}
+              className={`
+                rounded-2xl px-4 py-2 text-sm font-semibold transition
+                ${
+                  activeCategory === cat
+                    ? 'bg-gradient-to-r from-orange-400 to-yellow-300 text-white shadow'
+                    : 'bg-white/70 text-gray-700'
+                }
+              `}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <h3 style={{ margin: 0 }}>{game.title}</h3>
-                <button
-                  onClick={() => toggleFavorite(game.id)}
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 12,
-                    border: 'none',
-                    fontSize: 20,
-                    background: fav ? '#fee2e2' : '#f3f4f6',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {fav ? '❤️' : '🤍'}
-                </button>
-              </div>
+              {cat}
+            </button>
+          ))}
+        </div>
 
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <span
-                  style={{
-                    fontSize: 12,
-                    background: '#ffedd5',
-                    color: '#9a3412',
-                    padding: '4px 10px',
-                    borderRadius: 999,
-                  }}
-                >
-                  {game.category}
-                </span>
-                <span
-                  style={{
-                    fontSize: 12,
-                    background: '#dcfce7',
-                    color: '#166534',
-                    padding: '4px 10px',
-                    borderRadius: 999,
-                  }}
-                >
-                  {game.age}
-                </span>
-              </div>
+        {/* Возраст */}
+        <div className="flex flex-wrap gap-2">
+          {ageFilters.map((age) => (
+            <button
+              key={age}
+              onClick={() => setAgeFilter(age)}
+              className={`
+                rounded-2xl px-3 py-1 text-xs font-semibold transition
+                ${
+                  ageFilter === age
+                    ? 'bg-gradient-to-r from-green-400 to-emerald-400 text-white shadow'
+                    : 'bg-white/70 text-gray-700'
+                }
+              `}
+            >
+              {age}
+            </button>
+          ))}
+        </div>
 
-              <button
-                onClick={() => toggleOpen(game.id)}
-                style={{
-                  alignSelf: 'flex-start',
-                  padding: '6px 14px',
-                  borderRadius: 10,
-                  border: 'none',
-                  background: '#ffedd5',
-                  color: '#9a3412',
-                  cursor: 'pointer',
-                  fontSize: 13,
-                  fontWeight: 600,
-                }}
-              >
-                {open ? 'Скрыть' : 'Подробнее'}
-              </button>
+        {/* Карточки */}
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {visibleGames.map((game) => {
+            const open = isOpen(game.id);
+            const fav = isFavorite(game.id);
 
+            return (
               <div
-                style={{
-                  maxHeight: open ? 500 : 0,
-                  opacity: open ? 1 : 0,
-                  overflow: 'hidden',
-                  transition: 'all 0.3s ease',
+                key={game.id}
+                ref={(el) => {
+                  gameRefs.current[game.id] = el;
                 }}
+                className="rounded-3xl p-5 bg-white shadow-md hover:shadow-xl transition space-y-3"
               >
-                <p
-                  style={{
-                    fontSize: 14,
-                    lineHeight: 1.5,
-                    whiteSpace: 'pre-line',
-                    margin: '8px 0 0',
-                  }}
+                <div className="flex justify-between items-start">
+                  <h3 className="font-bold text-gray-800">
+                    {game.title}
+                  </h3>
+
+                  <button
+                    onClick={() => toggleFavorite(game.id)}
+                    className={`
+                      w-10 h-10 rounded-xl flex items-center justify-center text-lg transition
+                      ${
+                        fav
+                          ? 'bg-rose-100'
+                          : 'bg-gray-100'
+                      }
+                    `}
+                  >
+                    {fav ? '❤️' : '🤍'}
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <span className="px-3 py-1 rounded-full bg-orange-100 text-orange-700 font-semibold">
+                    {game.category}
+                  </span>
+                  <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 font-semibold">
+                    {game.age}
+                  </span>
+                </div>
+
+                <button
+                  onClick={() => toggleOpen(game.id)}
+                  className="text-sm font-semibold text-orange-500"
                 >
-                  {game.description}
-                </p>
+                  {open ? 'Скрыть' : 'Подробнее'}
+                </button>
+
+                <div
+                  className={`
+                    overflow-hidden transition-all duration-300
+                    ${open ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'}
+                  `}
+                >
+                  <p className="text-sm text-gray-600 whitespace-pre-line pt-2">
+                    {game.description}
+                  </p>
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
 }
+

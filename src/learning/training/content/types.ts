@@ -1,5 +1,5 @@
 export type TextBlock = {
-  type?: undefined;
+  type: 'text';
   text: string;
 };
 
